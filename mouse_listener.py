@@ -31,6 +31,9 @@ class mouse_listener(PyMouseEvent):
         int_x = int(x)
         int_y = int(y)
 
+        if button==1 and press and self._calibrating_seq:
+            print('Recorded Click!: ({0}, {1})'.format(int_x, int_y))
+
          # [Code for Pos selection]:
         if button==1 and press and self._calibrating_pos:
             print('Woomy!: ({0}, {1})'.format(int_x, int_y))
