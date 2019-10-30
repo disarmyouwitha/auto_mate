@@ -18,6 +18,7 @@ pyautogui.FAILSAFE = True
 from pynput import mouse, keyboard
 # ^(Using asyc/callbacks for each, and collecting them here as `Object action` or something like that.)
 # https://pynput.readthedocs.io/en/latest/
+# https://pythonhosted.org/pynput/keyboard.html
 
 
 # [Neat helper function for timing operations!]:
