@@ -19,9 +19,6 @@ def timer(msg):
     end = time.time()
     print('%s: %.02fms'%(msg, (end-start)*1000))
 
-def booya():
-    return 'woomy!'
-
 if __name__ == "__main__":
     print('Booya!')
     #with timer('calibrate_box'):
