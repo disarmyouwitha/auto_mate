@@ -19,11 +19,6 @@ from pynput import mouse, keyboard
 # ^(Using asyc/callbacks for each, and collecting them here as `Object action` or something like that.)
 # https://pynput.readthedocs.io/en/latest/
 
-# OTHERWISE.. maybe keep using PyUserInput && hooking keyboard too?
-from pymouse import PyMouseEvent
-from pykeyboard import PyKeyboard
-# https://github.com/PyUserInput/PyUserInput
-
 
 # [Neat helper function for timing operations!]:
 @contextlib.contextmanager
