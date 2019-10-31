@@ -1,11 +1,11 @@
 import os
 import sys
 import time
-import json
+#import json
 import imageio
-import pyautogui
+#import pyautogui
 import contextlib
-import skimage.metrics
+#import skimage.metrics   #Move SSIM to screen_pixel functions for auto_mate
 from pynput import mouse, keyboard
 #import mouse_listener
 
