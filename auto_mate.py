@@ -6,20 +6,11 @@ import imageio
 import pyautogui
 import contextlib
 import skimage.metrics
-import mouse_listener
+from pynput import mouse, keyboard
+#import mouse_listener
 
 pyautogui.PAUSE = 0
 pyautogui.FAILSAFE = True
-
-
-# I THINK that this wont work the same as reference script (thresh/mouse_listener)
-# I THINK that this script needs to combine mouse + keyboard listening for recording
-# I THINK I can do do with:
-from pynput import mouse, keyboard
-# ^(Using asyc/callbacks for each, and collecting them here as `Object action` or something like that.)
-# https://pynput.readthedocs.io/en/latest/
-# https://pythonhosted.org/pynput/keyboard.html
-
 
 # [Neat helper function for timing operations!]:
 @contextlib.contextmanager
@@ -29,18 +20,30 @@ def timer(msg):
     end = time.time()
     print('%s: %.02fms'%(msg, (end-start)*1000))
 
-def record_sequence():
-    print('record_sequence')
+def booya():
+    return 'woomy!'
 
-def playback_sequence():
-    print('playback_sequence')
+# [Use `pynput` for listening with asyc/callbacks]:
+# [Use `pynput` for controlling mouse/keyboard]:
+# https://pynput.readthedocs.io/en/latest/
+# https://pythonhosted.org/pynput/keyboard.html
 
+
+
+
+# [-]: Find better/prettier way to create windows in Python.
+# [0]: Switch  library to `pynput` for mouse/keyboard listening/control(?)
+# [1]: Switch to using callbacks from listeners to call actions (pos/grab)
+# [2]: Create class/json for `action` (Click, drag(screengrab for SSIM), etc)
+# [3]: Record Sequence of actions
+# [4]: Playback Sequence of actions
+# [5]: MIRROR actions across screen / can set up same page on left/right screen, record on left, and replay on right. 
 if __name__ == "__main__":
-    #record_sequence()
-    # click: {x,y}
-    # click: {x,y}
-    # type: str
+    print(booya())
 
+    print('[fin.]')
+
+    '''
     #with timer('calibrate_box'):
     #    mc = mouse_listener.mouse_listener('calibrate_box')
     #    mc.run()
@@ -48,5 +51,4 @@ if __name__ == "__main__":
     #with timer('calibrate_pos'):
     #    mc = mouse_listener.mouse_listener('calibrate_pos')
     #    mc.run()
-
-    print('[fin.]')
+    '''
