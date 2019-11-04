@@ -1,0 +1,4 @@
+{
+    "scanarea_start": {"x": 0, "y": 0}, 
+    "scanarea_stop": {"x": 100, "y": 100}
+}
