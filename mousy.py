@@ -1,6 +1,6 @@
 import sys
 import time
-from pynput import mouse
+from pynput import mouse, keyboard
 
 _mouse_record = True
 
@@ -33,10 +33,7 @@ def on_scroll(x, y, dx, dy):
 #    listener.join()
 
 # ...or, in a non-blocking fashion:
-listener = mouse.Listener(
-    on_move=on_move,
-    on_click=on_click,
-    on_scroll=on_scroll)
+listener = mouse.Listener(on_click=on_click)
 listener.start()
 
 while _mouse_record:

@@ -5,6 +5,46 @@ import json
 import contextlib
 from pynput import mouse, keyboard
 
+# [GLOBALS]:
+_click_int_x = None
+_click_int_y = None
+_mouse_record = True
+
+def on_press(key):
+    global _mouse_record
+
+    try:
+        print('alphanumeric key {0} pressed'.format(key.char))
+    except AttributeError:
+        print('special key {0} pressed'.format(key))
+        if key == keyboard.Key.ctrl:
+            print('[stopping listeners!]')
+            _mouse_record = False
+
+def on_click(x, y, button, pressed):
+    global _mouse_record, _click_int_x, _click_int_y
+    _int_x = int(x)
+    _int_y = int(y)
+
+    if pressed:
+        print('Pressed at: {0}'.format((_int_x, _int_y)))
+        _click_int_x = int(x)
+        _click_int_y = int(y)
+    else:
+        print('Released at: {0}'.format((_int_x, _int_y)))
+        if _int_x == _click_int_x and _int_y == _click_int_y:
+            print('Same -- POS')
+        else:
+            print('Different -- BOX')
+
+# [Neat helper function for timing operations!]:
+@contextlib.contextmanager
+def timer(msg):
+    start = time.time()
+    yield
+    end = time.time()
+    print('%s: %.02fms'%(msg, (end-start)*1000))
+
 class action():
     _id = 0
     _state = None
@@ -32,15 +72,6 @@ class action():
             print('Coords added to action{0}({1}): {2}'.format(self._action_id, self._state, _coord))
 
 
-# [Neat helper function for timing operations!]:
-@contextlib.contextmanager
-def timer(msg):
-    start = time.time()
-    yield
-    end = time.time()
-    print('%s: %.02fms'%(msg, (end-start)*1000))
-
-
 # https://pynput.readthedocs.io/en/latest/
 # https://pythonhosted.org/pynput/keyboard.html
 # [-]: Find better/prettier way to create windows in Python.
@@ -53,6 +84,20 @@ def timer(msg):
 # [1]: Playback Sequence of actions
 # [2]: MIRROR actions across screen / can set up same page on left/right screen, record on left, and replay on right. 
 if __name__ == "__main__":
+    # [non-blocking keyboard listener]:
+    listener = keyboard.Listener(on_press=on_press)
+    listener.start()
+
+    # [non-blocking mouse listener]:
+    listener = mouse.Listener(on_click=on_click)
+    listener.start()
+
+    print('[Mouse listening for clicks! Press CTRL to stop.]')
+    while _mouse_record:
+        time.sleep(1)
+    print('[fin.]')
+
+    '''
     action_items = []
     action_items.append(action('pos', {'x': 3, 'y': 3}))
     action_items.append(action('pos', [{'x': 7, 'y': 7}]))
@@ -71,3 +116,4 @@ if __name__ == "__main__":
     # [action_items list for replay]:
     for _action in action_items:
         _action.print_info()
+    '''
