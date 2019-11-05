@@ -73,16 +73,15 @@ class action():
 
 
 # https://pynput.readthedocs.io/en/latest/
-# https://pythonhosted.org/pynput/keyboard.html
-# [-]: Find better/prettier way to create windows in Python.
-# [0]: on CLICK -- Create action('pos', {click_coords})
+# [-]: on CLICK -- Create action('pos', {click_coords})
 # ^ (POS coords are used for click replay)
-# [1]: on DRAG -- Create action('box', {start_coords, stop_coords})
+# [-]: on DRAG -- Create action('box', {start_coords, stop_coords})
 # ^ (BOX coords are used for SSIM checking)
-# [-]: Create class/json for `action` (Click, drag(screengrab for SSIM), etc)
-# [0]: Record Sequence of actions
-# [1]: Playback Sequence of actions
-# [2]: MIRROR actions across screen / can set up same page on left/right screen, record on left, and replay on right. 
+# [0]: ^(Turn listener actions into class actions)
+# [1]: Record Sequence of actions
+# [2]: Playback Sequence of actions
+# [3]: MIRROR actions across screen / can set up same page on left/right screen, record on left, and replay on right.
+# [-]: Find better/prettier way to create windows in Python.
 if __name__ == "__main__":
     # [non-blocking keyboard listener]:
     listener = keyboard.Listener(on_press=on_press)
