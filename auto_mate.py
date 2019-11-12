@@ -244,52 +244,49 @@ class action():
         for _coord in self._coords_list:
             print('Added to action{0}({1}): {2} | {3}'.format(self._action_id, self._state, _coord, self._keyboard_buffer))
 
-def action_replay(action):
-    mouse_controller = ms.Controller()
-    keyboard_controller = kb.Controller()
-    action.print_info() ##
+    def replay(self):
+        mouse_controller = ms.Controller()
+        keyboard_controller = kb.Controller()
+        action.print_info() ##
 
-    # [POS| Click Position]:
-    if action._state == 'pos':
-        _x = action._coords_list[0].get('x')
-        _y = action._coords_list[0].get('y')
+        # [POS| Click Position]: # Need to check click/double-click for replay
+        if action._state == 'pos':
+            _x = action._coords_list[0].get('x')
+            _y = action._coords_list[0].get('y')
 
-        # [Set pointer position]:
-        move_to(_x, _y)
+            # [Set pointer position]:
+            move_to(_x, _y)
 
-        # [Press and release]:
-        #mouse_controller.press(ms.Button.left)
-        #mouse_controller.release(ms.Button.left)
-        mouse_controller.click(ms.Button.left, 1)
-        #mouse_controller.click(ms.Button.left, 2)
+            # [Press and release]:
+            mouse_controller.click(ms.Button.left, 1)
+            #mouse_controller.click(ms.Button.left, 2) # Need to check click/double-click for replay
 
-    # [KEYBOARD| replay typing]:
-    if action._state == 'keyboard':
-        keyboard_controller.type(action._keyboard_buffer)
+        # [KEYBOARD| replay typing]:
+        if action._state == 'keyboard':
+            keyboard_controller.type(action._keyboard_buffer)
 
-    # [KEY| Special Keys]:
-    if action._state == 'key':
-        keyboard_controller.press(action._keyboard_buffer)
-        keyboard_controller.release(action._keyboard_buffer)
+        # [KEY| Special Keys]:
+        if action._state == 'key':
+            keyboard_controller.press(action._keyboard_buffer)
+            keyboard_controller.release(action._keyboard_buffer)
 
-    # [PASS| Enter password]:
-    if action._state == 'pass':
-        print('Entering Password..')
-        # Move mouse && click on _x, _y?
-        keyboard_controller.type(action._keyboard_buffer)
+        # [PASS| Enter password]:
+        if action._state == 'pass':
+            print('Entering Password..')
+            # Move mouse && click on _x, _y?
+            keyboard_controller.type(action._keyboard_buffer)
 
-    # [BOX| SSIM?]:
-    if action._state == 'box':
-        print('SSIM?')
-        _start_x = action._coords_list[0].get('x')
-        _start_y = action._coords_list[0].get('y')
-        _stop_x = action._coords_list[1].get('x')
-        _stop_y = action._coords_list[1].get('y')
-        # ..draw_rect()...
+        # [BOX| SSIM?]:
+        if action._state == 'box':
+            print('SSIM?')
+            _start_x = action._coords_list[0].get('x')
+            _start_y = action._coords_list[0].get('y')
+            _stop_x = action._coords_list[1].get('x')
+            _stop_y = action._coords_list[1].get('y')
+            # ..draw_rect()...
 
-    # [2sec pause]:
-    time.sleep(2)
-
+        # [2sec pause]:
+        time.sleep(2)
 
 def move_to(int_x, int_y):
     mouse_controller = ms.Controller() ## self.mouse_controller
@@ -318,11 +315,10 @@ def move_to(int_x, int_y):
 
 
 # https://pynput.readthedocs.io/en/latest
-# [0]: Playback Sequence of actions
-#  ^ (Merge listeners into 1 class / Merge controllers into 1 class [Shared Class?])
 # [0]: action_replay becomes Action->replay()
-# [1]: MIRROR actions across screen / can set up same page on left/right screen, record on left, and replay on right.
-# [2]: (use BOX coords for SSIM checking)
+# [1]: (Merge listeners into 1 class / Merge controllers into 1 class [Shared Class?])
+# [2]: MIRROR actions across screen / can set up same page on left/right screen, record on left, and replay on right.
+# [3]: (use BOX coords for SSIM checking)
 if __name__ == "__main__":
 
     # [Record Actions]:
@@ -345,34 +341,17 @@ if __name__ == "__main__":
         for _action in action_items:
             _action.print_info()
 
+    #-------
     print('[Starting Replay]: 3sec')
     time.sleep(3)
+    #-------
 
     # [Replay Actions]:
     if _record == 0:
-        # [Steps to log in]: (Previously Recorded)
-        #action_items = []
-        #action_items.append(action('pos', [{'x': 1859, 'y': 230}]))
-        #action_items.append(action('pos', [{'x': 1147, 'y': 266}]))
-        #action_items.append(action('keyboard', [{'x': 1147, 'y': 266}], 'staging.uservices.com'))
-        #action_items.append(action('key', [{'x': 1147, 'y': 266}], 'Key.enter'))
-        #action_items.append(action('pos', [{'x': 718, 'y': 363}]))
-        #action_items.append(action('keyboard', [{'x': 718, 'y': 363}], 'jholloway'))
-        #action_items.append(action('key', [{'x': 718, 'y': 363}], 'Key.tab'))
-        #action_items.append(action('pass', [{'x': 735, 'y': 393}], 'Meowth73'))
-        #action_items.append(action('pos', [{'x': 561, 'y': 456}]))
-
-        # [action_items list for replay]:
         for _action in action_items:
-            action_replay(_action)
+            _action.replay()
 
     print('[fin.]')
     mouse_listener.stop()
     keyboard_listener.stop()
 
-    '''
-    action_items = []
-    action_items.append(action('pos', {'x': 3, 'y': 3}))
-    action_items.append(action('pos', [{'x': 7, 'y': 7}]))
-    action_items.append(action('box', [{'x': 0, 'y': 0}, {'x': 10, 'y': 10}]))
-    '''
