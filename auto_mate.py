@@ -216,13 +216,15 @@ def timer(msg):
     end = time.time()
     print('%s: %.02fms'%(msg, (end-start)*1000))
 
+
 class action():
     _id = 0
     _state = None
     _action_id = 0
     _coords_list = None
+    _ms_controller = None
+    _kb_controller = None
     _keyboard_buffer = None
-    #_keyboard_buffer = ''
 
     # Check if coords_list is actually a list?
     def __init__(self, state=None, coords_list=None, keyboard_buffer=None):
@@ -231,87 +233,90 @@ class action():
         self._coords_list = coords_list
         self._keyboard_buffer = keyboard_buffer
 
+        self._ms_ctrl = ms.Controller()
+        self._kb_ctrl = kb.Controller()
+
         # [If coords weren't sent as list, add as list]:
         if coords_list and type(coords_list)!=list:
             self._coords_list = [coords_list]
 
-        #self.print_info()
+        self.print_info('Added')
 
         # [Class ID incremetor]:
         action._id+=1
 
-    def print_info(self):
-        for _coord in self._coords_list:
-            print('Added to action{0}({1}): {2} | {3}'.format(self._action_id, self._state, _coord, self._keyboard_buffer))
-
     def replay(self):
-        mouse_controller = ms.Controller()
-        keyboard_controller = kb.Controller()
-        action.print_info() ##
+        self.print_info('Replay')
 
         # [POS| Click Position]: # Need to check click/double-click for replay
-        if action._state == 'pos':
-            _x = action._coords_list[0].get('x')
-            _y = action._coords_list[0].get('y')
+        if self._state == 'pos':
+            _x = self._coords_list[0].get('x')
+            _y = self._coords_list[0].get('y')
 
             # [Set pointer position]:
-            move_to(_x, _y)
+            self.move_to(_x, _y)
 
             # [Press and release]:
-            mouse_controller.click(ms.Button.left, 1)
-            #mouse_controller.click(ms.Button.left, 2) # Need to check click/double-click for replay
+            self._ms_ctrl.click(ms.Button.left, 1)
+            #self._ms_ctrl.click(ms.Button.left, 2) # Need to check click/double-click for replay
 
         # [KEYBOARD| replay typing]:
-        if action._state == 'keyboard':
-            keyboard_controller.type(action._keyboard_buffer)
+        if self._state == 'keyboard':
+            self._kb_ctrl.type(self._keyboard_buffer)
 
         # [KEY| Special Keys]:
-        if action._state == 'key':
-            keyboard_controller.press(action._keyboard_buffer)
-            keyboard_controller.release(action._keyboard_buffer)
+        if self._state == 'key':
+            self._kb_ctrl.press(self._keyboard_buffer)
+            self._kb_ctrl.release(self._keyboard_buffer)
 
         # [PASS| Enter password]:
-        if action._state == 'pass':
-            print('Entering Password..')
+        if self._state == 'pass':
             # Move mouse && click on _x, _y?
-            keyboard_controller.type(action._keyboard_buffer)
+            self._kb_ctrl.type(self._keyboard_buffer)
 
         # [BOX| SSIM?]:
-        if action._state == 'box':
+        if self._state == 'box':
             print('SSIM?')
-            _start_x = action._coords_list[0].get('x')
-            _start_y = action._coords_list[0].get('y')
-            _stop_x = action._coords_list[1].get('x')
-            _stop_y = action._coords_list[1].get('y')
+            _start_x = self._coords_list[0].get('x')
+            _start_y = self._coords_list[0].get('y')
+            _stop_x = self._coords_list[1].get('x')
+            _stop_y = self._coords_list[1].get('y')
             # ..draw_rect()...
 
         # [2sec pause]:
         time.sleep(2)
 
-def move_to(int_x, int_y):
-    mouse_controller = ms.Controller() ## self.mouse_controller
+    # [Moved into `actions` class.. Needs to be moved into `omni_controller` which is brought up by action: self._omni_ctrl]
+    def move_to(self, int_x, int_y):
+        (x, y) = self._ms_ctrl.position
+        _x = int(x)
+        _y = int(y)
 
-    (x, y) = mouse_controller.position
-    _x = int(x)
-    _y = int(y)
+        while True:
+            if (_x == int_x) and (_y == int_y):
+                break
 
-    while True:
-        if (_x == int_x) and (_y == int_y):
-            break
+            # [Mod X]:
+            if _x > int_x:
+                _x-=1
+            if _x < int_x:
+                _x+=1
 
-        # [Mod X]:
-        if _x > int_x:
-            _x-=1
-        if _x < int_x:
-            _x+=1
+            # [Mod Y]:
+            if _y > int_y:
+                _y-=1
+            if _y < int_y:
+                _y+=1
 
-        # [Mod Y]:
-        if _y > int_y:
-            _y-=1
-        if _y < int_y:
-            _y+=1
+            self._ms_ctrl.position = (_x, _y)
 
-        mouse_controller.position = (_x, _y)
+    # [Pretty Print actions]:
+    def print_info(self, act):
+        for _coord in self._coords_list:
+            if self._keyboard_buffer is None:
+                print('{0} action{1}({2}): {3}'.format(act, self._action_id, self._state, _coord))
+            else:
+                print('{0} action{1}({2}): {3} | {4}'.format(act, self._action_id, self._state, _coord, self._keyboard_buffer))
 
 
 # https://pynput.readthedocs.io/en/latest
@@ -320,7 +325,6 @@ def move_to(int_x, int_y):
 # [2]: MIRROR actions across screen / can set up same page on left/right screen, record on left, and replay on right.
 # [3]: (use BOX coords for SSIM checking)
 if __name__ == "__main__":
-
     # [Record Actions]:
     if _record > 0:
         if _record == 1 or _record == 2:
@@ -337,9 +341,6 @@ if __name__ == "__main__":
         while _record > 0:
             time.sleep(1)
         print('[Exiting listening loop!]')
-
-        for _action in action_items:
-            _action.print_info()
 
     #-------
     print('[Starting Replay]: 3sec')
