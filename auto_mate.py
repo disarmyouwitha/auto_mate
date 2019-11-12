@@ -2,14 +2,15 @@ import os
 import sys
 import time
 import json
+import pyautogui
 import contextlib
 import pynput.mouse as ms
 import pynput.keyboard as kb
 from pynput.mouse import Button, Controller
 from pynput.keyboard import Key, Controller
 
-#class omni_listener():
-#class omni_controller():
+pyautogui.PAUSE = 0
+pyautogui.FAILSAFE = True
 
 # [OSX restricts certain actions to root, pynput cant access without sudo]:
 if sys.platform == 'darwin':
@@ -18,12 +19,14 @@ if sys.platform == 'darwin':
         sys.exit(1)
 
 # [GLOBALS]:
-action_items = []
 _record = 1
 # _record = 0 | off
 # _record = 1 | on (Both)
 # _record = 2 | on (Mouse only)
 # _record = 3 | on (Keyboard only)
+action_items = []
+
+#class omni_listener():
 
 # [MOUSE GLOBALS]:
 _click_int_x = None
@@ -61,6 +64,8 @@ def on_press(key):
             #print('special key {0} pressed'.format(key))
             # ^DEBUGG
 
+            _pass_thru = False
+
             # HANDLE_SPECIAL_KEYS()
 
             # [If SHIFT is pressed]:
@@ -79,15 +84,15 @@ def on_press(key):
             if key == kb.Key.space:
                 _keyboard_buffer+=' '
 
-            # [If ALT is pressed]:
+            # [If ALT key pressed]:
             if key == kb.Key.alt:
                 _hold_ALT = True
 
-            # [If CMD is pressed]:
+            # [If CMD key pressed]:
             if key == kb.Key.cmd:
                 _hold_CMD = True
 
-            # [If TAB is pressed]:
+            # [If TAB key pressed]:
             if key == kb.Key.tab:
                 _hold_TAB = True
                 check_keyboard_buffer(interrupt=True)
@@ -102,20 +107,33 @@ def on_press(key):
                 if _hold_ALT_CMD:
                     pass
                 else: # [Add TAB key]:
-                    _act = action('key', {'x': _click_int_x, 'y': _click_int_y}, key)
-                    action_items.append(_act)
+                    _pass_thru = True
 
-            # [If ENTER is pressed]:
-            if key == kb.Key.enter:
-                check_keyboard_buffer(interrupt=True)
-                _act = action('key', {'x': _click_int_x, 'y': _click_int_y}, key)
-                action_items.append(_act)
-
-            # [If CTRL is pressed]:
+            # [If CTRL key pressed]:
             if key == kb.Key.ctrl:
                 _hold_CTRL = True
                 _record = 0
                 print('[Listeners "stopped"]')
+
+            # [If ENTER key pressed]:
+            if key == kb.Key.enter:
+                _pass_thru = True
+            
+            # [If ARROW key pressed]:
+            if key == kb.Key.up:
+                _pass_thru = True
+            if key == kb.Key.down:
+                _pass_thru = True
+            if key == kb.Key.left:
+                _pass_thru = True
+            if key == kb.Key.right:
+                _pass_thru = True
+
+
+            if _pass_thru:
+                check_keyboard_buffer(interrupt=True)
+                _act = action('key', {'x': _click_int_x, 'y': _click_int_y}, key)
+                action_items.append(_act)
 
             CHECK_KEYBOARD_EMERGENCY(_hold_CTRL, _hold_SHIFT)
 
@@ -178,8 +196,8 @@ def on_click(x, y, button, pressed):
                 return
 
             # [SAME = POS | DIFF = BOX]:
-            if _int_x == _click_int_x and _int_y == _click_int_y:
-                _act = action('pos', [{'x': _int_x, 'y': _int_y}])
+            if abs(_int_x-_click_int_x) < 5 and abs(_int_y-_click_int_y) < 5:
+                _act = action('click', [{'x': _int_x, 'y': _int_y}])
                 action_items.append(_act)
             else:
                 _act = action('box', [{'x': _click_int_x, 'y': _click_int_y}, {'x': _int_x, 'y': _int_y}])
@@ -221,9 +239,9 @@ class action():
     _id = 0
     _state = None
     _action_id = 0
+    _kb_ctrl = None
+    _ms_ctrl = None
     _coords_list = None
-    _ms_controller = None
-    _kb_controller = None
     _keyboard_buffer = None
 
     # Check if coords_list is actually a list?
@@ -232,9 +250,8 @@ class action():
         self._action_id = action._id
         self._coords_list = coords_list
         self._keyboard_buffer = keyboard_buffer
-
-        self._ms_ctrl = ms.Controller()
         self._kb_ctrl = kb.Controller()
+        self._ms_ctrl = ms.Controller()
 
         # [If coords weren't sent as list, add as list]:
         if coords_list and type(coords_list)!=list:
@@ -248,31 +265,32 @@ class action():
     def replay(self):
         self.print_info('Replay')
 
-        # [POS| Click Position]: # Need to check click/double-click for replay
-        if self._state == 'pos':
+        # [CLICK| Click Position]: 
+        # ^(Need to check click/double-click for replay)
+        if self._state == 'click':
             _x = self._coords_list[0].get('x')
             _y = self._coords_list[0].get('y')
-
-            # [Set pointer position]:
-            self.move_to(_x, _y)
-
-            # [Press and release]:
-            self._ms_ctrl.click(ms.Button.left, 1)
-            #self._ms_ctrl.click(ms.Button.left, 2) # Need to check click/double-click for replay
+            pyautogui.moveTo(_x, _y, duration=1)
+            self._ms_ctrl.click(Button.left, 1) # pyautogui wont change active window (OSX)
 
         # [KEYBOARD| replay typing]:
         if self._state == 'keyboard':
-            self._kb_ctrl.type(self._keyboard_buffer)
+            pyautogui.typewrite(self._keyboard_buffer, interval=.1)
 
         # [KEY| Special Keys]:
         if self._state == 'key':
             self._kb_ctrl.press(self._keyboard_buffer)
             self._kb_ctrl.release(self._keyboard_buffer)
+            time.sleep(.1)
 
         # [PASS| Enter password]:
         if self._state == 'pass':
-            # Move mouse && click on _x, _y?
-            self._kb_ctrl.type(self._keyboard_buffer)
+            # [Move mouse && click on _x, _y]: (?)
+            _x = self._coords_list[0].get('x')
+            _y = self._coords_list[0].get('y')
+            pyautogui.click(x=_x, y=_y, button='left', clicks=1)
+
+            pyautogui.typewrite(self._keyboard_buffer, interval=.1)
 
         # [BOX| SSIM?]:
         if self._state == 'box':
@@ -281,49 +299,35 @@ class action():
             _start_y = self._coords_list[0].get('y')
             _stop_x = self._coords_list[1].get('x')
             _stop_y = self._coords_list[1].get('y')
-            # ..draw_rect()...
+            _diff_x = (_stop_x - _start_x)
+            _diff_y = (_stop_y - _start_y)
 
-        # [2sec pause]:
-        time.sleep(2)
+            # [Draw box coords specified]:
+            pyautogui.moveTo(_start_x, _start_y, duration=1)
+            pyautogui.moveTo((_start_x+_diff_x),_start_y, duration=1)
+            pyautogui.moveTo((_start_x+_diff_x),(_start_y+_diff_y), duration=1)
+            pyautogui.moveTo(_start_x,(_start_y+_diff_y), duration=1)
+            pyautogui.moveTo(_start_x,_start_y, duration=1)
 
-    # [Moved into `actions` class.. Needs to be moved into `omni_controller` which is brought up by action: self._omni_ctrl]
-    def move_to(self, int_x, int_y):
-        (x, y) = self._ms_ctrl.position
-        _x = int(x)
-        _y = int(y)
-
-        while True:
-            if (_x == int_x) and (_y == int_y):
-                break
-
-            # [Mod X]:
-            if _x > int_x:
-                _x-=1
-            if _x < int_x:
-                _x+=1
-
-            # [Mod Y]:
-            if _y > int_y:
-                _y-=1
-            if _y < int_y:
-                _y+=1
-
-            self._ms_ctrl.position = (_x, _y)
+        # [1sec pause]:
+        time.sleep(1)
 
     # [Pretty Print actions]:
     def print_info(self, act):
         for _coord in self._coords_list:
-            if self._keyboard_buffer is None:
+            if self._keyboard_buffer is None or self._state == 'pass':
                 print('{0} action{1}({2}): {3}'.format(act, self._action_id, self._state, _coord))
             else:
                 print('{0} action{1}({2}): {3} | {4}'.format(act, self._action_id, self._state, _coord, self._keyboard_buffer))
 
 
-# https://pynput.readthedocs.io/en/latest
-# [0]: action_replay becomes Action->replay()
-# [1]: (Merge listeners into 1 class / Merge controllers into 1 class [Shared Class?])
+# [0]: (Merge listeners into 1 class / Merge controllers into 1 class)
+# [1]: Need a way so save python class objects (actions)
 # [2]: MIRROR actions across screen / can set up same page on left/right screen, record on left, and replay on right.
 # [3]: (use BOX coords for SSIM checking)
+# https://pyautogui.readthedocs.io/en/latest/cheatsheet.html
+# https://pythonhosted.org/pynput/mouse.html#controlling-the-mouse
+# https://pythonhosted.org/pynput/keyboard.html#controlling-the-keyboard
 if __name__ == "__main__":
     # [Record Actions]:
     if _record > 0:
@@ -349,8 +353,13 @@ if __name__ == "__main__":
 
     # [Replay Actions]:
     if _record == 0:
-        for _action in action_items:
-            _action.replay()
+        _again = True
+        while _again:
+            for _action in action_items:
+                _action.replay()
+
+            _again = input('[Do you wish to Replay again?]:')
+            _again = False if (_again.lower() == 'n' or _again.lower() == 'no') else True
 
     print('[fin.]')
     mouse_listener.stop()
