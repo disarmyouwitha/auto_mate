@@ -17,15 +17,10 @@ pyautogui.FAILSAFE = True
 if sys.platform == 'darwin':
     if os.getuid() != 0:
         print('[If you are using OSX, please run as root: `sudo python3 auto_mate.py`]')
-        sys.exit(1)
+        os._exit(1)
 
 # [GLOBALS]:
 _record = 1
-# _record = 0 | off
-# _record = 1 | on (Both)
-# _record = 2 | on (Mouse only)
-# _record = 3 | on (Keyboard only)
-# ^(Soft-set.. Should turn on both Listeners and only act on actions if _record set)
 
 #class omni_listener():
 
@@ -293,13 +288,14 @@ class action_iterator:
         self._stage = stage
 
     def __next__(self):
-        if self._index < len(self._stage._action_items): # Check if action_items are fully iterated or not
+        if self._index < len(self._stage._action_items):
             result = self._stage._action_items[self._index]
 
             self._index +=1
             return result
 
         raise StopIteration
+
 
 # [Stage Manager to organize actions]:
 class stage_manager:
@@ -327,13 +323,12 @@ class stage_manager:
 
         if file_name is None:
             file_name = input('What would you like the filename to be?: ')
-            _again = 0 if (_again.lower() == 'n' or _again.lower() == 'no') else 1
 
         for act in self:
             _json_seq.update(act._JSON())
 
         print('[Saving sequence for replay]: {0}'.format(file_name))
-        with open(file_name, 'w') as fp:
+        with open(file_name, 'w+') as fp:
             json.dump(_json_seq, fp)
 
     def load_sequence(self, file_name=None):
@@ -354,6 +349,21 @@ class stage_manager:
         print('[Replaying sequence]')
         for act in self._action_items:
             self._replay(act)
+
+    def replay_loop_check(self):
+        # [See if user wants to continue loop]:
+        _again = 1
+        while _again > 0:
+            _again-=1
+            if _again==0:
+                _again = input('[Do you wish to Replay again?] (N for no, # for loop): ')
+                if _again.isalpha() or _again=='':
+                    _again = 0 if (_again.lower() == 'n' or _again.lower() == 'no') else 1
+                else:
+                    _again = int(_again)
+
+            if _again > 0:
+                self.replay_sequence()
 
     def _replay(self, action):
         action._print('Replay')
@@ -419,39 +429,52 @@ if __name__ == "__main__":
     keyboard_listener = kb.Listener(on_press=on_press, on_release=on_release)
     # ^(non-blocking mouse/keyboard listener)
 
-    with mouse_listener, keyboard_listener:
-        #if _load_from_file:
-            #stage.load_sequence('replay.json')
-        #else:
+    # [Check command line arguments for mode]:
+    try:
+        _mode = sys.argv[1]
+        accepted_modes = ['record','replay']
+        if _mode not in accepted_modes:
+            print('Syntax: python3 auto_mate.py record | python3 auto_mate.py replay filename.json')
+            os._exit(1)
+    except:
+        _mode = 'record'
 
-        print('[Mouse/Keyboard listening! Press CTRL to stop recording]')
-        while _record > 0:
-            time.sleep(1) #pass
+    # [Check command line arguments for file_name]:
+    try:
+        _file_name = sys.argv[2]
+    except:
+        _file_name = None
 
-        #-------
-        print('[Starting Replay]: 2sec')
-        time.sleep(2)
-        #-------
+    # [Replay from file]:
+    if 'replay' in _mode:
+        if _file_name and '.json' in _file_name:
+            stage.load_sequence(_file_name)
+            stage.replay_sequence()
+            stage.replay_loop_check()
+        else:
+            print('[Syntax: `python3 auto_mate.py replay filename.json`]')
+            os._exit(1)
 
-        # [Replay Actions]:
-        stage.replay_sequence()
+    if 'record' in _mode:
+        with mouse_listener, keyboard_listener:
+            # [Recording loop]:
+            print('[Mouse/Keyboard listening! Press CTRL to stop recording]')
+            while _record > 0:
+                time.sleep(1) #pass (?)
 
-        # [Saving sequence to JSON file for replay]:
-        _file_name = input('[Do you wish to save replay?] (`filename.json` for yes): ')
-        if _file_name != '':
-            stage.save_sequence(_file_name)
+            print('[Starting Replay]: 2sec')
+            time.sleep(2)
 
-        # [See if user wants to continue loop]:
-        _again = 1
-        while _again > 0:
-            _again-=1
-            if _again==0:
-                _again = input('[Do you wish to Replay again?] (N for no, # for loop): ')
-                if _again.isalpha() or _again=='':
-                    _again = 0 if (_again.lower() == 'n' or _again.lower() == 'no') else 1
-                else:
-                    _again = int(_again)
+            # [Replay Actions]:
+            stage.replay_sequence()
 
-            if _again > 0:
-                stage.replay_sequence()
+            # [Saving sequence to JSON file for replay]:
+            if _file_name is None:
+                _file_name = input('[Do you wish to save replay?] (`filename.json` for yes): ')
+
+            if _file_name != '':
+                stage.save_sequence(_file_name)
+
+            stage.replay_loop_check()
+
     print('[fin.]')
