@@ -78,7 +78,7 @@ def on_press(key):
                 if len(_keyboard_buffer) > 0:
                     _keyboard_buffer = _keyboard_buffer[:-1]
                 else: # [Otherwise add as special character for replay?]:
-                    _act = action('key', {'x': _click_int_x, 'y': _click_int_y}, key)
+                    _act = action(state='key', coords_list={'x': _click_int_x, 'y': _click_int_y}, keyboard_buffer=key)
                     stage.append(_act)
 
             # [Add space for spacebar xD]:
@@ -133,7 +133,7 @@ def on_press(key):
 
             if _pass_thru:
                 check_keyboard_buffer(interrupt=True)
-                _act = action('key', {'x': _click_int_x, 'y': _click_int_y}, key)
+                _act = action(state='key', coords_list={'x': _click_int_x, 'y': _click_int_y}, keyboard_buffer=key)
                 stage.append(_act)
 
             CHECK_KEYBOARD_EMERGENCY(_hold_CTRL, _hold_SHIFT)
@@ -163,7 +163,7 @@ def check_keyboard_buffer(interrupt=False):
     if interrupt==True or ((_typed_last > 0) and (time.time() - _typed_last) >= 2):
         if _keyboard_buffer != '':
             # [Action for Keyboard takes x,y of last click and keyboard_buffer]:
-            _act = action('keyboard', {'x': _click_int_x, 'y': _click_int_y}, _keyboard_buffer)
+            _act = action(state='keyboard', coords_list={'x': _click_int_x, 'y': _click_int_y}, keyboard_buffer=_keyboard_buffer)
             stage.append(_act)
 
         _keyboard_buffer=''
@@ -190,7 +190,7 @@ def on_click(x, y, button, pressed):
             if _hold_SHIFT:
                 _CMD_input = True
                 _pass = input('Enter password here: ')
-                _act = action('pass', {'x': _click_int_x, 'y': _click_int_y}, _pass)
+                _act = action(state='pass', coords_list={'x': _click_int_x, 'y': _click_int_y}, keyboard_buffer=_pass)
                 stage.append(_act)
 
                 print('Click field to resume! / Please use Submit instead of Enter')
@@ -198,10 +198,10 @@ def on_click(x, y, button, pressed):
 
             # [SAME = POS | DIFF = BOX]:
             if abs(_int_x-_click_int_x) < 5 and abs(_int_y-_click_int_y) < 5:
-                _act = action('click', [{'x': _int_x, 'y': _int_y}])
+                _act = action(state='click', coords_list=[{'x': _int_x, 'y': _int_y}])
                 stage.append(_act)
             else:
-                _act = action('box', [{'x': _click_int_x, 'y': _click_int_y}, {'x': _int_x, 'y': _int_y}])
+                _act = action(state='box', coords_list=[{'x': _click_int_x, 'y': _click_int_y}, {'x': _int_x, 'y': _int_y}])
                 stage.append(_act)
 
 def on_move(x, y):
@@ -243,25 +243,34 @@ class action:
     _coords_list = None
     _keyboard_buffer = None
 
-    # Check if coords_list is actually a list?
-    def __init__(self, state=None, coords_list=None, keyboard_buffer=None):
-        self._state = state
-        self._action_id = action._id
-        self._coords_list = coords_list
-        self._keyboard_buffer = keyboard_buffer
+    # [Initializer from scratch]:
+    def __init__(self, state=None, coords_list=None, keyboard_buffer=None, JSON_STR=None):
+        if JSON_STR is None:
+            self._state = state
+            self._action_id = action._id
+            self._coords_list = coords_list
+            self._keyboard_buffer = str(keyboard_buffer)
 
-        # [If coords weren't sent as list, add as list]:
-        if coords_list and type(coords_list)!=list:
-            self._coords_list = [coords_list]
+            # [If coords weren't sent as list, add as list]:
+            if coords_list and type(coords_list)!=list:
+                self._coords_list = [coords_list]
+
+            # [Class ID incremetor]:
+            action._id+=1
+        else:
+            JSON_DATA = json.loads(JSON_STR)
+            self._state = JSON_DATA.get('_state')
+            #self._action_id = action._id
+            self._action_id = JSON_DATA.get('_action_id')
+            # ^(Use _action_id passed in from JSON or no?)
+            self._coords_list = JSON_DATA.get('_coords_list')
+            self._keyboard_buffer = JSON_DATA.get('_keyboard_buffer')
 
         self._print('Added')
 
-        # [Class ID incremetor]:
-        action._id+=1
-
     # [Serializer]:
     def _JSON(self):
-        return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, indent=4)
+        return json.dumps(self, default=lambda o: o.__dict__)
 
     # [Pretty Print actions]:
     def _print(self, act):
@@ -307,6 +316,10 @@ class stage_manager:
     def append(self, action):
         self._action_items.append(action)
 
+    def str_to_key(self, str):
+        (_class, _key) = str.split('.') 
+        return getattr(sys.modules[__name__], _class)[_key]
+
     def _replay(self, action):
         action._print('Replay')
 
@@ -324,8 +337,8 @@ class stage_manager:
 
         # [KEY| Special Keys]:
         if action._state == 'key':
-            self._kb_ctrl.press(action._keyboard_buffer)
-            self._kb_ctrl.release(action._keyboard_buffer)
+            self._kb_ctrl.press(self.str_to_key(action._keyboard_buffer))
+            self._kb_ctrl.release(self.str_to_key(action._keyboard_buffer))
             time.sleep(.1)
 
         # [PASS| Enter password]:
@@ -368,6 +381,7 @@ class stage_manager:
 if __name__ == "__main__":
     # [GLOBALS]:
     stage = stage_manager()
+    stage2 = stage_manager()
     mouse_listener = ms.Listener(on_click=on_click, on_move=on_move)
     keyboard_listener = kb.Listener(on_press=on_press, on_release=on_release)
     # ^(non-blocking mouse/keyboard listener)
@@ -382,16 +396,26 @@ if __name__ == "__main__":
         time.sleep(3)
         #-------
 
-         # [Replay Actions]:
-        if _record == 0:
-            _again = True
-            while _again:
-                for action in stage:
-                    stage._replay(action)
+        # [Take all actions from stage and add to stage2]:
+        for act in stage:
+            stage2.append(action(JSON_STR=act._JSON()))
 
-                #_again = False # Turn off Replay Again
-                if _again:
-                    _again = input('[Do you wish to Replay again?]:')
-                    _again = False if (_again.lower() == 'n' or _again.lower() == 'no') else True
+        # [Replay all actions from stage2]:
+        for act in stage2:
+            stage2._replay(act)
 
-        print('[fin.]')
+    # move back over later? lol
+    '''
+    # [Replay Actions]:
+    if _record == 0:
+        _again = True
+        while _again:
+            for action in stage:
+                stage._replay(action)
+
+            #_again = False # Turn off Replay Again
+            if _again:
+                _again = input('[Do you wish to Replay again?]:')
+                _again = False if (_again.lower() == 'n' or _again.lower() == 'no') else True
+    '''
+    print('[fin.]')
