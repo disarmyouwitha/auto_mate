@@ -78,8 +78,8 @@ def on_press(key):
                 if len(_keyboard_buffer) > 0:
                     _keyboard_buffer = _keyboard_buffer[:-1]
                 else: # [Otherwise add as special character for replay?]:
-                    _act = action(state='key', coords_list={'x': _click_int_x, 'y': _click_int_y}, keyboard_buffer=key)
-                    stage.append(_act)
+                    act = action(state='key', coords_list={'x': _click_int_x, 'y': _click_int_y}, keyboard_buffer=key)
+                    stage.append(act)
 
             # [Add space for spacebar xD]:
             if key == kb.Key.space:
@@ -133,8 +133,8 @@ def on_press(key):
 
             if _pass_thru:
                 check_keyboard_buffer(interrupt=True)
-                _act = action(state='key', coords_list={'x': _click_int_x, 'y': _click_int_y}, keyboard_buffer=key)
-                stage.append(_act)
+                act = action(state='key', coords_list={'x': _click_int_x, 'y': _click_int_y}, keyboard_buffer=key)
+                stage.append(act)
 
             CHECK_KEYBOARD_EMERGENCY(_hold_CTRL, _hold_SHIFT)
 
@@ -163,8 +163,8 @@ def check_keyboard_buffer(interrupt=False):
     if interrupt==True or ((_typed_last > 0) and (time.time() - _typed_last) >= 2):
         if _keyboard_buffer != '':
             # [Action for Keyboard takes x,y of last click and keyboard_buffer]:
-            _act = action(state='keyboard', coords_list={'x': _click_int_x, 'y': _click_int_y}, keyboard_buffer=_keyboard_buffer)
-            stage.append(_act)
+            act = action(state='keyboard', coords_list={'x': _click_int_x, 'y': _click_int_y}, keyboard_buffer=_keyboard_buffer)
+            stage.append(act)
 
         _keyboard_buffer=''
         _typed_last=0
@@ -190,19 +190,19 @@ def on_click(x, y, button, pressed):
             if _hold_SHIFT:
                 _CMD_input = True
                 _pass = input('Enter password here: ')
-                _act = action(state='pass', coords_list={'x': _click_int_x, 'y': _click_int_y}, keyboard_buffer=_pass)
-                stage.append(_act)
+                act = action(state='pass', coords_list={'x': _click_int_x, 'y': _click_int_y}, keyboard_buffer=_pass)
+                stage.append(act)
 
                 print('Click field to resume! / Please use Submit instead of Enter')
                 return
 
             # [SAME = POS | DIFF = BOX]:
             if abs(_int_x-_click_int_x) < 5 and abs(_int_y-_click_int_y) < 5:
-                _act = action(state='click', coords_list=[{'x': _int_x, 'y': _int_y}])
-                stage.append(_act)
+                act = action(state='click', coords_list=[{'x': _int_x, 'y': _int_y}])
+                stage.append(act)
             else:
-                _act = action(state='box', coords_list=[{'x': _click_int_x, 'y': _click_int_y}, {'x': _int_x, 'y': _int_y}])
-                stage.append(_act)
+                act = action(state='box', coords_list=[{'x': _click_int_x, 'y': _click_int_y}, {'x': _int_x, 'y': _int_y}])
+                stage.append(act)
 
 def on_move(x, y):
     global _record
@@ -257,20 +257,22 @@ class action:
 
             # [Class ID incremetor]:
             action._id+=1
-        else:
-            JSON_DATA = json.loads(JSON_STR)
-            self._state = JSON_DATA.get('_state')
-            #self._action_id = action._id
-            self._action_id = JSON_DATA.get('_action_id')
-            # ^(Use _action_id passed in from JSON or no?)
-            self._coords_list = JSON_DATA.get('_coords_list')
-            self._keyboard_buffer = JSON_DATA.get('_keyboard_buffer')
 
-        self._print('Added')
+            self._print('Added')
+        else:
+            # [Should only ever be 1 key, but whatever]:
+            for key in JSON_STR.keys():
+                JSON_DATA = json.loads(JSON_STR[key])
+                self._state = JSON_DATA.get('_state')
+                self._action_id = JSON_DATA.get('_action_id')
+                self._coords_list = JSON_DATA.get('_coords_list')
+                self._keyboard_buffer = JSON_DATA.get('_keyboard_buffer')
+                self._print('Loaded')
 
     # [Serializer]:
     def _JSON(self):
-        return json.dumps(self, default=lambda o: o.__dict__)
+        _json_dump = json.dumps(self, default=lambda o: o.__dict__)
+        return {'action{0}'.format(self._action_id): _json_dump}
 
     # [Pretty Print actions]:
     def _print(self, act):
@@ -319,6 +321,39 @@ class stage_manager:
     def str_to_key(self, str):
         (_class, _key) = str.split('.') 
         return getattr(sys.modules[__name__], _class)[_key]
+
+    def save_sequence(self, file_name=None):
+        _json_seq = {}
+
+        if file_name is None:
+            file_name = input('What would you like the filename to be?: ')
+            _again = 0 if (_again.lower() == 'n' or _again.lower() == 'no') else 1
+
+        for act in self:
+            _json_seq.update(act._JSON())
+
+        print('[Saving sequence for replay]: {0}'.format(file_name))
+        with open(file_name, 'w') as fp:
+            json.dump(_json_seq, fp)
+
+    def load_sequence(self, file_name=None):
+        self._action_items = []
+
+        if file_name is None:
+            file_name = input('What file would you like to replay?: ')
+
+        print('[Loading replay file]: {0}'.format(file_name))
+        with open(file_name) as _json_seq:
+            sequence = json.load(_json_seq)
+
+        for _json_act in sequence:
+            act = action(JSON_STR={_json_act: sequence[_json_act]})
+            self._action_items.append(act)
+
+    def replay_sequence(self):
+        print('[Replaying sequence]')
+        for act in self._action_items:
+            self._replay(act)
 
     def _replay(self, action):
         action._print('Replay')
@@ -371,51 +406,52 @@ class stage_manager:
         time.sleep(1)
 
 
-# [0]: Need a way so save python class objects (actions)
-# [1]: (Merge listeners into 1 class / Merge controllers into 1 class)
-# [2]: (use BOX coords for SSIM checking)
-# [3]: MIRROR actions across screen / can set up same page on left/right screen, record on left, and replay on right.
+# [0]: (Merge listeners into 1 class / Merge controllers into 1 class)
+# [1]: (use BOX coords for SSIM checking)
+# [2]: MIRROR actions across screen / can set up same page on left/right screen, record on left, and replay on right.
 # https://pyautogui.readthedocs.io/en/latest/cheatsheet.html
 # https://pythonhosted.org/pynput/mouse.html#controlling-the-mouse
 # https://pythonhosted.org/pynput/keyboard.html#controlling-the-keyboard
 if __name__ == "__main__":
     # [GLOBALS]:
     stage = stage_manager()
-    stage2 = stage_manager()
     mouse_listener = ms.Listener(on_click=on_click, on_move=on_move)
     keyboard_listener = kb.Listener(on_press=on_press, on_release=on_release)
     # ^(non-blocking mouse/keyboard listener)
 
     with mouse_listener, keyboard_listener:
+        #if _load_from_file:
+            #stage.load_sequence('replay.json')
+        #else:
+
         print('[Mouse/Keyboard listening! Press CTRL to stop recording]')
         while _record > 0:
             time.sleep(1) #pass
 
         #-------
-        print('[Starting Replay]: 3sec')
-        time.sleep(3)
+        print('[Starting Replay]: 2sec')
+        time.sleep(2)
         #-------
 
-        # [Take all actions from stage and add to stage2]:
-        for act in stage:
-            stage2.append(action(JSON_STR=act._JSON()))
+        # [Replay Actions]:
+        stage.replay_sequence()
 
-        # [Replay all actions from stage2]:
-        for act in stage2:
-            stage2._replay(act)
+        # [Saving sequence to JSON file for replay]:
+        _file_name = input('[Do you wish to save replay?] (`filename.json` for yes): ')
+        if _file_name != '':
+            stage.save_sequence(_file_name)
 
-    # move back over later? lol
-    '''
-    # [Replay Actions]:
-    if _record == 0:
-        _again = True
-        while _again:
-            for action in stage:
-                stage._replay(action)
+        # [See if user wants to continue loop]:
+        _again = 1
+        while _again > 0:
+            _again-=1
+            if _again==0:
+                _again = input('[Do you wish to Replay again?] (N for no, # for loop): ')
+                if _again.isalpha() or _again=='':
+                    _again = 0 if (_again.lower() == 'n' or _again.lower() == 'no') else 1
+                else:
+                    _again = int(_again)
 
-            #_again = False # Turn off Replay Again
-            if _again:
-                _again = input('[Do you wish to Replay again?]:')
-                _again = False if (_again.lower() == 'n' or _again.lower() == 'no') else True
-    '''
+            if _again > 0:
+                stage.replay_sequence()
     print('[fin.]')
