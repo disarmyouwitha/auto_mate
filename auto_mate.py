@@ -2,9 +2,13 @@ import os
 import sys
 import time
 import json
+import glob
+import shutil
+import imageio
 import threading
 import pyautogui
 import contextlib
+import screen_pixel
 import pynput.mouse as ms
 import pynput.keyboard as kb
 from pynput.mouse import Button, Controller
@@ -191,7 +195,7 @@ def on_click(x, y, button, pressed):
                 print('Click field to resume! / Please use Submit instead of Enter')
                 return
 
-            # [SAME = POS | DIFF = BOX]:
+            # [SAME = CLICK | DIFF = BOX]:
             if abs(_int_x-_click_int_x) < 5 and abs(_int_y-_click_int_y) < 5:
                 act = action(state='click', coords_list=[{'x': _int_x, 'y': _int_y}])
                 stage.append(act)
@@ -237,6 +241,7 @@ class action:
     _action_id = 0
     _coords_list = None
     _keyboard_buffer = None
+    _ssim_filename = None
 
     # [Initializer from scratch]:
     def __init__(self, state=None, coords_list=None, keyboard_buffer=None, JSON_STR=None):
@@ -263,6 +268,14 @@ class action:
                 self._coords_list = JSON_DATA.get('_coords_list')
                 self._keyboard_buffer = JSON_DATA.get('_keyboard_buffer')
                 self._print('Loaded')
+
+        # [If BOX try to Capture screenshot from coords]: (for SSIM)
+        if self._state == 'box':
+            _ssim_control = stage._sp.grab_rect(self._coords_list[0],self._coords_list[1], mod=1)
+            #_ssim_resized = stage._sp.resize_image(_ssim_control, scale_percent=50) # Resize image
+
+            self._ssim_filename = '{0}_action{1}.png'.format('SEQ', self._action_id)
+            imageio.imwrite(self._ssim_filename, _ssim_control)
 
     # [Serializer]:
     def _JSON(self):
@@ -299,11 +312,13 @@ class action_iterator:
 
 # [Stage Manager to organize actions]:
 class stage_manager:
+    _sp = None
     _kb_ctrl = None
     _ms_ctrl = None
     _action_items = None
 
     def __init__(self):
+        self._sp = screen_pixel.screen_pixel()
         self._kb_ctrl = kb.Controller()
         self._ms_ctrl = ms.Controller()
         self._action_items = []
@@ -325,11 +340,24 @@ class stage_manager:
             file_name = input('What would you like the filename to be?: ')
 
         for act in self:
+            # [Rename SEQ_action0.png to use file_name]
+            if act._state == 'box':
+                _file_mask = '{0}_action{1}.png'.format(file_name[:-5], act._action_id)
+                shutil.move(act._ssim_filename, _file_mask)
+                act._ssim_filename = _file_mask
+
+            # [Update json_data]:
             _json_seq.update(act._JSON())
+
 
         print('[Saving sequence for replay]: {0}'.format(file_name))
         with open(file_name, 'w+') as fp:
             json.dump(_json_seq, fp)
+
+        # [Rename SEQ_action0.png files to replace SEQ with filename]:
+        #for file_path in glob.glob('SEQ_action*.png'):
+        #    file_after = '{0}{1}'.format(file_name[:-5], file_path[3:])
+        #    shutil.move(file_path, file_after)
 
     def load_sequence(self, file_name=None):
         self._action_items = []
@@ -397,7 +425,7 @@ class stage_manager:
 
         # [BOX| SSIM?]:
         if action._state == 'box':
-            print('SSIM?')
+            print('SSIM?: {0}'.format(action._ssim_filename))
             _start_x = action._coords_list[0].get('x')
             _start_y = action._coords_list[0].get('y')
             _stop_x = action._coords_list[1].get('x')
@@ -416,6 +444,8 @@ class stage_manager:
         time.sleep(1)
 
 
+# [-]: Grayscale and save _ssim_control_filename images; Compare to grab_rect taken at replay
+# [-]: Ability to capture Replay of actions (going through form) and (rather than using captured keystrokes) pass in data for replay
 # [0]: (Merge listeners into 1 class / Merge controllers into 1 class)
 # [1]: (use BOX coords for SSIM checking)
 # [2]: MIRROR actions across screen / can set up same page on left/right screen, record on left, and replay on right.

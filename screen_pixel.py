@@ -5,7 +5,6 @@ import json
 import time
 import numpy
 import imageio
-import pyautogui
 
 # [Import Quartz for OSX, else use MSS]: (for screen_pixel.capture())
 if sys.platform == 'darwin':
@@ -69,7 +68,7 @@ class screen_pixel(object):
         return nemo_scaled 
 
     # [To facilitate screen grabbing Box area]:
-    def grab_rect(self, json_coords_start, json_coords_stop, mod=1):
+    def grab_rect(self, json_coords_start, json_coords_stop, mod=1, nemo=0):
         _start_x = json_coords_start.get('x')
         _start_y = json_coords_start.get('y')
         start_x = (_start_x*mod)
@@ -80,40 +79,18 @@ class screen_pixel(object):
         stop_x = (_stop_x*mod)
         stop_y = (_stop_y*mod)
 
-        # [Trim _numpy array to rect]:
-        self.capture()
-        return self._numpy[start_y:stop_y,start_x:stop_x]
+        # [Use provided array, or take a capture]:
+        try:
+            if nemo==0:
+                self.capture()
+                _numpy_img = self._numpy
+        except Exception:
+            #print('Caught exception, passing image in')
+            _numpy_img = nemo
+            pass
 
-    def draw_rect(self, json_coords_start, json_coords_stop, mod=1):
-        _start_x = json_coords_start.get('x')
-        _start_y = json_coords_start.get('y')
-        _start_x = (_start_x*mod)
-        _start_y = (_start_y*mod)
+        return _numpy_img[start_y:stop_y,start_x:stop_x]
 
-        _stop_x = json_coords_stop.get('x')
-        _stop_y = json_coords_stop.get('y')
-        _stop_x = (_stop_x*mod)
-        _stop_y = (_stop_y*mod)
-
-        # [Draw box around Scan Area specified with mouse]:
-        print('Pause. Drawing scan area with mouse:')
-        time.sleep(2)
-
-        _diff_x = (_stop_x - _start_x)
-        _diff_y = (_stop_y - _start_y)
-        pyautogui.moveTo(_start_x, _start_y, duration=1)
-        pyautogui.moveTo((_start_x+_diff_x),_start_y, duration=1)
-        pyautogui.moveTo((_start_x+_diff_x),(_start_y+_diff_y), duration=1)
-        pyautogui.moveTo(_start_x,(_start_y+_diff_y), duration=1)
-        pyautogui.moveTo(_start_x,_start_y, duration=1)
-
-    def move_to(self, json_coords_start, dura=1):
-        # [Draw box around Scan Area specified with mouse]:
-        print('Pause. (2sec) Moving mouse to recorded Pos:')
-        time.sleep(2)
-
-        pyautogui.moveTo(json_coords_start.get('x'), json_coords_start.get('y'), duration=dura)
-    
-    def click_to(self, json_coords_start, dura=1):
-        self.move_to(json_coords_start, dura)
-        pyautogui.leftClick(x=json_coords_start.get('x'), y=json_coords_start.get('y'))
+    # [Strictly SSIM goes here]: (other logic goes in stage_manager)
+    def check_ssim(self, imgA, imgB, thresh=.90):
+        print('check_ssim goes in screen_pixel?')
