@@ -326,7 +326,7 @@ class action:
 
         # [BOX| CHECK SSIM]:
         if self._state == 'box':
-            if self._check_ssim():
+            if self._check_ssim(thresh=.9):
                 print('[passed]')
             else:
                 print('[failed]')
