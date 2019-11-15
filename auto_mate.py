@@ -463,15 +463,12 @@ class stage_manager:
                 self.replay_sequence()
 
 
-# [-]: Grayscale and save _ssim_control_filename images; Compare to grab_rect taken at replay
-# [-]: Ability to capture Replay of actions (going through form) and (rather than using captured keystrokes) pass in data for replay
-# [-]: > Click URL bar, pass in: https://www.websitedimensions.com/pixel/
-# [0]: (Merge listeners into 1 class / Merge controllers into 1 class)
-# [1]: (use BOX coords for SSIM checking)
-# [2]: MIRROR actions across screen / can set up same page on left/right screen, record on left, and replay on right.
+# https://pythonhosted.org/pynput/
 # https://pyautogui.readthedocs.io/en/latest/cheatsheet.html
-# https://pythonhosted.org/pynput/mouse.html#controlling-the-mouse
-# https://pythonhosted.org/pynput/keyboard.html#controlling-the-keyboard
+# [0]: (Merge listeners into 1 class / Merge controllers into 1 class)
+# [1]: Ability to capture Replay of actions (going through form) and (rather than using captured keystrokes) pass in data for replay
+#  >>> Click URL bar, pass in: https://www.websitedimensions.com/pixel/
+# [2]: MIRROR actions across screen / can set up same page on left/right screen, record on left, and replay on right.
 if __name__ == "__main__":
     # [Check command line arguments for mode]:
     try:
@@ -533,9 +530,3 @@ if __name__ == "__main__":
             stage.replay_loop_check()
 
     print('[fin.]')
-
-
-# Write OMNI_CLASS
-# PASS OMNI CLASS TO ACTION OBJECTS?
-# GLOBAL OMNI CLASS?
-# ACTION SHOULD BE ABLE TO RUN ITSELF
