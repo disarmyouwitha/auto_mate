@@ -181,6 +181,9 @@ def on_click(x, y, button, pressed):
         if pressed:
             _click_int_x = int(x)
             _click_int_y = int(y)
+
+            # [Capture screen on click]: (For clean drag event)
+            stage._sp.capture()
         else: # [RELEASED]:
             # [Turn off CMD_input after click]:
             if _CMD_input:
@@ -203,7 +206,7 @@ def on_click(x, y, button, pressed):
                 stage.append(act)
             else:
                 act = action(state='box', coords_list=[{'x': _click_int_x, 'y': _click_int_y}, {'x': _int_x, 'y': _int_y}])
-                act._set_ssim()
+                #act._set_ssim()
                 stage.append(act)
 
 def on_move(x, y):
@@ -264,8 +267,8 @@ class action:
 
             # [If BOX try to Capture screenshot from coords]: (for SSIM)
             if self._state == 'box':
-                _ssim_control = stage._sp.grab_rect(self._coords_list[0],self._coords_list[1], mod=2)
-                
+                _ssim_control = stage._sp.grab_rect(self._coords_list[0],self._coords_list[1], mod=2, nemo=stage._sp._numpy)
+
                 self._ssim_filename = '{0}_action{1}.png'.format(('SEQ' if stage._file_name is None else stage._file_name[:-5]), self._action_id)
                 imageio.imwrite(self._ssim_filename, _ssim_control)
 
@@ -280,10 +283,15 @@ class action:
                 self._keyboard_buffer = JSON_DATA.get('_keyboard_buffer')
                 self._ssim_filename = JSON_DATA.get('_ssim_filename')
                 self._PRINT('Loaded')
+                stage._sp.capture()
 
-    def _set_ssim(self):
+        if self._state == 'box':
+            self._set_ssim(stage._sp._numpy)
+
+    def _set_ssim(self, nemo):
         control = imageio.imread(self._ssim_filename)
-        test = stage._sp.grab_rect(self._coords_list[0],self._coords_list[1], mod=2)
+        test = stage._sp.grab_rect(self._coords_list[0],self._coords_list[1], mod=2, nemo=nemo)
+        imageio.imwrite('SET_SSIM.png', test)
         self._ssim_score  = stage._sp.check_ssim(control, test)
 
     def _check_ssim(self, thresh=.9):
@@ -291,7 +299,10 @@ class action:
         test = stage._sp.grab_rect(self._coords_list[0],self._coords_list[1], mod=2)
         imageio.imwrite('{0}_action{1}.png'.format('TEST', self._action_id), test)
         ssim_score = stage._sp.check_ssim(control, test)
-        print("SAVED_SSIM: {}".format(self._ssim_score))
+
+        #print("SAVED_SSIM: {}".format(self._ssim_score))
+        # ^(Can probably compared new_ssim to saved_ssim for more accurate results)
+
         return True if (ssim_score > thresh) else False
 
     def _RUN(self):
@@ -525,7 +536,10 @@ if __name__ == "__main__":
                 stage.save_sequence(_file_name)
             else:
                 # [Cleanup unsaved files]:
-                shutil.remove('SEQ_*.png')
+                try:
+                    shutil.remove('SEQ_*.png')
+                except:
+                    pass
 
             stage.replay_loop_check()
 
