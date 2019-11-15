@@ -280,7 +280,6 @@ class action:
                 self._control_shape = _numpy_array.shape
                 self._control_64 = base64.b64encode(_numpy_bytes)
                 self._set_ssim(stage._sp._numpy)
-                imageio.imwrite('arry.png', _numpy_array)
             self._PRINT('Added')
         else:
             # [Should only ever be 1 key, but whatever]:
@@ -302,17 +301,17 @@ class action:
     def _set_ssim(self, nemo=0):
         _control_bytes = base64.b64decode(self._control_64)
         _control_array = numpy.frombuffer(_control_bytes, dtype='uint8').reshape(self._control_shape)
-        imageio.imwrite('SSIM_control.png', _control_array) ## 
+        #imageio.imwrite('SSIM_control.png', _control_array) ## 
         test = stage._sp.grab_rect(self._coords_list[0],self._coords_list[1], mod=(2 if _RETINA else 1), nemo=nemo)
-        imageio.imwrite('SSIM_test.png', _control_array) ## 
+        #imageio.imwrite('SSIM_test.png', test) ## 
         self._ssim_score  = stage._sp.check_ssim(_control_array, test)
 
     def _check_ssim(self, thresh=.9):
         _control_bytes = base64.b64decode(self._control_64)
         _control_array = numpy.frombuffer(_control_bytes, dtype='uint8').reshape(self._control_shape)
-        imageio.imwrite('{0}_action{1}.png'.format('CONTROL', self._action_id), _control_array) ##
+        #imageio.imwrite('{0}_action{1}.png'.format('CONTROL', self._action_id), _control_array) ##
         test = stage._sp.grab_rect(self._coords_list[0],self._coords_list[1], mod=(2 if _RETINA else 1))
-        imageio.imwrite('{0}_action{1}.png'.format('TEST', self._action_id), test) ##
+        #imageio.imwrite('{0}_action{1}.png'.format('TEST', self._action_id), test) ##
         ssim_score = stage._sp.check_ssim(_control_array, test)
 
         #print("SAVED_SSIM: {}".format(self._ssim_score))
