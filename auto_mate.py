@@ -1,19 +1,26 @@
+import io
 import os
 import sys
 import time
 import json
 import glob
+import numpy
+import pandas
+#import codecs
+import base64
 import shutil
 import imageio
 import threading
 import pyautogui
 import contextlib
+import jsonpickle
 import screen_pixel
 import pynput.mouse as ms
 import pynput.keyboard as kb
 from pynput.mouse import Button, Controller
 from pynput.keyboard import Key, Controller
 
+_RETINA = False
 pyautogui.PAUSE = 0
 pyautogui.FAILSAFE = True
 
@@ -22,6 +29,7 @@ if sys.platform == 'darwin':
     if os.getuid() != 0:
         print('[If you are using OSX, please run as root: `sudo python3 auto_mate.py`]')
         os._exit(1)
+_RETINA = False
 
 # [GLOBALS]:
 _record = 1
@@ -246,8 +254,9 @@ class action:
     _action_id = 0
     _coords_list = None
     _keyboard_buffer = None
-    _ssim_filename = None
     _ssim_score = None
+    _control_64 = None
+    _control_shape = None
 
     # [Initializer from scratch]:
     def __init__(self, state=None, coords_list=None, keyboard_buffer=None, JSON_STR=None):
@@ -266,21 +275,22 @@ class action:
 
             # [If BOX try to Capture screenshot from coords]: (for SSIM)
             if self._state == 'box':
-                _ssim_control = stage._sp.grab_rect(self._coords_list[0],self._coords_list[1], mod=2, nemo=stage._sp._numpy)
-                self._ssim_filename = '{0}_action{1}.png'.format(('SEQ' if stage._file_name is None else stage._file_name[:-5]), self._action_id)
-                imageio.imwrite(self._ssim_filename, _ssim_control)
+                _numpy_array = stage._sp.grab_rect(self._coords_list[0],self._coords_list[1], mod=(2 if _RETINA else 1), nemo=stage._sp._numpy)
+                _numpy_bytes = _numpy_array.tobytes()
+                self._control_shape = _numpy_array.shape
+                self._control_64 = base64.b64encode(_numpy_bytes)
                 self._set_ssim(stage._sp._numpy)
-
             self._PRINT('Added')
         else:
             # [Should only ever be 1 key, but whatever]:
             for key in JSON_STR.keys():
                 JSON_DATA = json.loads(JSON_STR[key])
+                JSON_DATA = jsonpickle.decode(JSON_DATA)
                 self._state = JSON_DATA.get('_state')
                 self._action_id = JSON_DATA.get('_action_id')
                 self._coords_list = JSON_DATA.get('_coords_list')
                 self._keyboard_buffer = JSON_DATA.get('_keyboard_buffer')
-                self._ssim_filename = JSON_DATA.get('_ssim_filename')
+                self._buffer_bytes_64 = JSON_DATA.get('_buffer_bytes_64')
                 self._PRINT('Loaded')
                 stage._sp.capture()
 
@@ -288,15 +298,18 @@ class action:
                 self._set_ssim()
 
     def _set_ssim(self, nemo=0):
-        control = imageio.imread(self._ssim_filename)
-        test = stage._sp.grab_rect(self._coords_list[0],self._coords_list[1], mod=2, nemo=nemo)
-        self._ssim_score  = stage._sp.check_ssim(control, test)
+        _control_bytes = base64.b64decode(self._control_64)
+        _control_array = numpy.frombuffer(_control_bytes, dtype='uint8').reshape(self._control_shape)
+        #imageio.imwrite('SSIM.png', _control_array) ## 
+        test = stage._sp.grab_rect(self._coords_list[0],self._coords_list[1], mod=(2 if _RETINA else 1), nemo=nemo)
+        self._ssim_score  = stage._sp.check_ssim(_control_array, test)
 
     def _check_ssim(self, thresh=.9):
-        control = imageio.imread(self._ssim_filename)
-        test = stage._sp.grab_rect(self._coords_list[0],self._coords_list[1], mod=2)
-        imageio.imwrite('{0}_action{1}.png'.format('TEST', self._action_id), test)
-        ssim_score = stage._sp.check_ssim(control, test)
+        _control_bytes = base64.b64decode(self._control_64)
+        _control_array = numpy.frombuffer(_control_bytes, dtype='uint8').reshape(self._control_shape)
+        test = stage._sp.grab_rect(self._coords_list[0],self._coords_list[1], mod=(2 if _RETINA else 1))
+        #imageio.imwrite('{0}_action{1}.png'.format('TEST', self._action_id), test) ##
+        ssim_score = stage._sp.check_ssim(_control_array, test)
 
         #print("SAVED_SSIM: {}".format(self._ssim_score))
         # ^(Can probably compared new_ssim to saved_ssim for more accurate results)
@@ -340,6 +353,7 @@ class action:
             else:
                 print('[failed]')
 
+            '''
             # [Draw box coords specified]:
             _start_x = self._coords_list[0].get('x')
             _start_y = self._coords_list[0].get('y')
@@ -353,13 +367,14 @@ class action:
             pyautogui.moveTo((_start_x+_diff_x),(_start_y+_diff_y), duration=1)
             pyautogui.moveTo(_start_x,(_start_y+_diff_y), duration=1)
             pyautogui.moveTo(_start_x,_start_y, duration=1)
+            '''
 
         # [1sec pause]:
         time.sleep(1)
 
     # [Serializer]:
     def _JSON(self):
-        _json_dump = json.dumps(self, default=lambda o: o.__dict__)
+        _json_dump = json.dumps(self, default=lambda o: jsonpickle.encode(o.__dict__))
         return {'action{0}'.format(self._action_id): _json_dump}
 
     # [Pretty Print actions]:
@@ -422,14 +437,8 @@ class stage_manager:
 
         self._file_name = file_name
 
+        # [Update json_data]:
         for act in self:
-            # [Rename SEQ_action0.png to use file_name]
-            if act._state == 'box':
-                _file_mask = '{0}_action{1}.png'.format(self._file_name[:-5], act._action_id)
-                shutil.move(act._ssim_filename, _file_mask)
-                act._ssim_filename = _file_mask
-
-            # [Update json_data]:
             _json_seq.update(act._JSON())
 
 
@@ -472,6 +481,9 @@ class stage_manager:
                 self.replay_sequence()
 
 
+# [-]: Check size of JSON file for little grab? for big?
+# [-]: ESC for EXIT rather than control
+# [-]: Replay alt-tabs
 # https://pythonhosted.org/pynput/
 # https://pyautogui.readthedocs.io/en/latest/cheatsheet.html
 # [0]: (Merge listeners into 1 class / Merge controllers into 1 class)
