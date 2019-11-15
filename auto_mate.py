@@ -206,7 +206,6 @@ def on_click(x, y, button, pressed):
                 stage.append(act)
             else:
                 act = action(state='box', coords_list=[{'x': _click_int_x, 'y': _click_int_y}, {'x': _int_x, 'y': _int_y}])
-                #act._set_ssim()
                 stage.append(act)
 
 def on_move(x, y):
@@ -268,9 +267,9 @@ class action:
             # [If BOX try to Capture screenshot from coords]: (for SSIM)
             if self._state == 'box':
                 _ssim_control = stage._sp.grab_rect(self._coords_list[0],self._coords_list[1], mod=2, nemo=stage._sp._numpy)
-
                 self._ssim_filename = '{0}_action{1}.png'.format(('SEQ' if stage._file_name is None else stage._file_name[:-5]), self._action_id)
                 imageio.imwrite(self._ssim_filename, _ssim_control)
+                self._set_ssim(stage._sp._numpy)
 
             self._PRINT('Added')
         else:
@@ -285,13 +284,12 @@ class action:
                 self._PRINT('Loaded')
                 stage._sp.capture()
 
-        if self._state == 'box':
-            self._set_ssim(stage._sp._numpy)
+            if self._state == 'box':
+                self._set_ssim()
 
-    def _set_ssim(self, nemo):
+    def _set_ssim(self, nemo=0):
         control = imageio.imread(self._ssim_filename)
         test = stage._sp.grab_rect(self._coords_list[0],self._coords_list[1], mod=2, nemo=nemo)
-        imageio.imwrite('SET_SSIM.png', test)
         self._ssim_score  = stage._sp.check_ssim(control, test)
 
     def _check_ssim(self, thresh=.9):
