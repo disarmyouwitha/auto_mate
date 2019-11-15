@@ -92,5 +92,14 @@ class screen_pixel(object):
         return _numpy_img[start_y:stop_y,start_x:stop_x]
 
     # [Strictly SSIM goes here]: (other logic goes in stage_manager)
-    def check_ssim(self, imgA, imgB, thresh=.90):
-        print('check_ssim goes in screen_pixel?')
+    def check_ssim(self, control, test, thresh=.9):
+        # [Convert images to grayscale]:
+        gray_control = cv2.cvtColor(control, cv2.COLOR_BGR2GRAY)
+        gray_test = cv2.cvtColor(test, cv2.COLOR_BGR2GRAY)
+
+        imageio.imwrite('test_{0}_gray.png'.format(config_name), gray_test) #remove?#
+
+        (score, diff) = skimage.metrics.structural_similarity(gray_control, gray_test, full=True)
+
+        print("SSIM: {}".format(score))
+        return True if (score > thresh) else False

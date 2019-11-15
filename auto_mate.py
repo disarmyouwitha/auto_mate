@@ -25,6 +25,8 @@ if sys.platform == 'darwin':
 
 # [GLOBALS]:
 _record = 1
+_kb_ctrl = None
+_ms_ctrl = None
 
 #class omni_listener():
 
@@ -258,7 +260,7 @@ class action:
             # [Class ID incremetor]:
             action._id+=1
 
-            self._print('Added')
+            self._PRINT('Added')
         else:
             # [Should only ever be 1 key, but whatever]:
             for key in JSON_STR.keys():
@@ -267,7 +269,7 @@ class action:
                 self._action_id = JSON_DATA.get('_action_id')
                 self._coords_list = JSON_DATA.get('_coords_list')
                 self._keyboard_buffer = JSON_DATA.get('_keyboard_buffer')
-                self._print('Loaded')
+                self._PRINT('Loaded')
 
         # [If BOX try to Capture screenshot from coords]: (for SSIM)
         if self._state == 'box':
@@ -277,13 +279,67 @@ class action:
             self._ssim_filename = '{0}_action{1}.png'.format('SEQ', self._action_id)
             imageio.imwrite(self._ssim_filename, _ssim_control)
 
+    def _RUN(self):
+        self._PRINT('Replay')
+
+        # [CLICK| Click Position]: 
+        # ^(Need to check click/double-click for replay)
+        if self._state == 'click':
+            _x = self._coords_list[0].get('x')
+            _y = self._coords_list[0].get('y')
+            pyautogui.moveTo(_x, _y, duration=1)
+            _ms_ctrl.click(Button.left, 1) # pyautogui wont change active window (OSX)
+
+        # [KEYBOARD| replay typing]:
+        if self._state == 'keyboard':
+            pyautogui.typewrite(self._keyboard_buffer, interval=.1)
+
+        # [KEY| Special Keys]:
+        if self._state == 'key':
+            _kb_ctrl.press(self.str_to_key(self._keyboard_buffer))
+            _kb_ctrl.release(self.str_to_key(self._keyboard_buffer))
+            time.sleep(.1)
+
+        # [PASS| Enter password]:
+        if self._state == 'pass':
+            # [Move mouse && click on _x, _y]: (?)
+            _x = self._coords_list[0].get('x')
+            _y = self._coords_list[0].get('y')
+            pyautogui.click(x=_x, y=_y, button='left', clicks=1)
+
+            pyautogui.typewrite(self._keyboard_buffer, interval=.1)
+
+        # [BOX| SSIM?]:
+        if self._state == 'box':
+            print('SSIM?: {0}'.format(self._ssim_filename))
+            _start_x = self._coords_list[0].get('x')
+            _start_y = self._coords_list[0].get('y')
+            _stop_x = self._coords_list[1].get('x')
+            _stop_y = self._coords_list[1].get('y')
+            _diff_x = (_stop_x - _start_x)
+            _diff_y = (_stop_y - _start_y)
+
+            control = imageio.imread(self._ssim_filename)
+            test = stage._sp.grab_rect(self._coords_list[0],self._coords_list[1], mod=1)
+            stage._sp.check_ssim(control, test, thresh=.9)
+
+            # [Draw box coords specified]:
+            pyautogui.moveTo(_start_x, _start_y, duration=1)
+            pyautogui.moveTo((_start_x+_diff_x),_start_y, duration=1)
+            pyautogui.moveTo((_start_x+_diff_x),(_start_y+_diff_y), duration=1)
+            pyautogui.moveTo(_start_x,(_start_y+_diff_y), duration=1)
+            pyautogui.moveTo(_start_x,_start_y, duration=1)
+
+        # [1sec pause]:
+        time.sleep(1)
+
     # [Serializer]:
     def _JSON(self):
         _json_dump = json.dumps(self, default=lambda o: o.__dict__)
         return {'action{0}'.format(self._action_id): _json_dump}
 
     # [Pretty Print actions]:
-    def _print(self, act):
+    def _PRINT(self, act):
         for _coord in self._coords_list:
             if self._keyboard_buffer is None or self._state == 'pass':
                 print('{0} action{1}({2}): {3}'.format(act, self._action_id, self._state, _coord))
@@ -313,14 +369,11 @@ class action_iterator:
 # [Stage Manager to organize actions]:
 class stage_manager:
     _sp = None
-    _kb_ctrl = None
-    _ms_ctrl = None
+
     _action_items = None
 
     def __init__(self):
         self._sp = screen_pixel.screen_pixel()
-        self._kb_ctrl = kb.Controller()
-        self._ms_ctrl = ms.Controller()
         self._action_items = []
 
     def __iter__(self):
@@ -354,11 +407,6 @@ class stage_manager:
         with open(file_name, 'w+') as fp:
             json.dump(_json_seq, fp)
 
-        # [Rename SEQ_action0.png files to replace SEQ with filename]:
-        #for file_path in glob.glob('SEQ_action*.png'):
-        #    file_after = '{0}{1}'.format(file_name[:-5], file_path[3:])
-        #    shutil.move(file_path, file_after)
-
     def load_sequence(self, file_name=None):
         self._action_items = []
 
@@ -376,7 +424,7 @@ class stage_manager:
     def replay_sequence(self):
         print('[Replaying sequence]')
         for act in self._action_items:
-            self._replay(act)
+            act._RUN()
 
     def replay_loop_check(self):
         # [See if user wants to continue loop]:
@@ -393,56 +441,6 @@ class stage_manager:
             if _again > 0:
                 self.replay_sequence()
 
-    def _replay(self, action):
-        action._print('Replay')
-
-        # [CLICK| Click Position]: 
-        # ^(Need to check click/double-click for replay)
-        if action._state == 'click':
-            _x = action._coords_list[0].get('x')
-            _y = action._coords_list[0].get('y')
-            pyautogui.moveTo(_x, _y, duration=1)
-            self._ms_ctrl.click(Button.left, 1) # pyautogui wont change active window (OSX)
-
-        # [KEYBOARD| replay typing]:
-        if action._state == 'keyboard':
-            pyautogui.typewrite(action._keyboard_buffer, interval=.1)
-
-        # [KEY| Special Keys]:
-        if action._state == 'key':
-            self._kb_ctrl.press(self.str_to_key(action._keyboard_buffer))
-            self._kb_ctrl.release(self.str_to_key(action._keyboard_buffer))
-            time.sleep(.1)
-
-        # [PASS| Enter password]:
-        if action._state == 'pass':
-            # [Move mouse && click on _x, _y]: (?)
-            _x = action._coords_list[0].get('x')
-            _y = action._coords_list[0].get('y')
-            pyautogui.click(x=_x, y=_y, button='left', clicks=1)
-
-            pyautogui.typewrite(action._keyboard_buffer, interval=.1)
-
-        # [BOX| SSIM?]:
-        if action._state == 'box':
-            print('SSIM?: {0}'.format(action._ssim_filename))
-            _start_x = action._coords_list[0].get('x')
-            _start_y = action._coords_list[0].get('y')
-            _stop_x = action._coords_list[1].get('x')
-            _stop_y = action._coords_list[1].get('y')
-            _diff_x = (_stop_x - _start_x)
-            _diff_y = (_stop_y - _start_y)
-
-            # [Draw box coords specified]:
-            pyautogui.moveTo(_start_x, _start_y, duration=1)
-            pyautogui.moveTo((_start_x+_diff_x),_start_y, duration=1)
-            pyautogui.moveTo((_start_x+_diff_x),(_start_y+_diff_y), duration=1)
-            pyautogui.moveTo(_start_x,(_start_y+_diff_y), duration=1)
-            pyautogui.moveTo(_start_x,_start_y, duration=1)
-
-        # [1sec pause]:
-        time.sleep(1)
-
 
 # [-]: Grayscale and save _ssim_control_filename images; Compare to grab_rect taken at replay
 # [-]: Ability to capture Replay of actions (going through form) and (rather than using captured keystrokes) pass in data for replay
@@ -454,6 +452,8 @@ class stage_manager:
 # https://pythonhosted.org/pynput/keyboard.html#controlling-the-keyboard
 if __name__ == "__main__":
     # [GLOBALS]:
+    _kb_ctrl = kb.Controller()
+    _ms_ctrl = ms.Controller()
     stage = stage_manager()
     mouse_listener = ms.Listener(on_click=on_click, on_move=on_move)
     keyboard_listener = kb.Listener(on_press=on_press, on_release=on_release)
@@ -508,3 +508,9 @@ if __name__ == "__main__":
             stage.replay_loop_check()
 
     print('[fin.]')
+
+
+# Write OMNI_CLASS
+# PASS OMNI CLASS TO ACTION OBJECTS?
+# GLOBAL OMNI CLASS?
+# ACTION SHOULD BE ABLE TO RUN ITSELF
