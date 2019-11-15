@@ -5,6 +5,7 @@ import json
 import time
 import numpy
 import imageio
+import skimage.metrics
 
 # [Import Quartz for OSX, else use MSS]: (for screen_pixel.capture())
 if sys.platform == 'darwin':
@@ -97,9 +98,9 @@ class screen_pixel(object):
         gray_control = cv2.cvtColor(control, cv2.COLOR_BGR2GRAY)
         gray_test = cv2.cvtColor(test, cv2.COLOR_BGR2GRAY)
 
-        imageio.imwrite('test_{0}_gray.png'.format(config_name), gray_test) #remove?#
-
+        # [Do SSIM]:
         (score, diff) = skimage.metrics.structural_similarity(gray_control, gray_test, full=True)
 
         print("SSIM: {}".format(score))
-        return True if (score > thresh) else False
+        return score
+        #return True if (score > thresh) else False

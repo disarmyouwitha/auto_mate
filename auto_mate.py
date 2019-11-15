@@ -203,6 +203,7 @@ def on_click(x, y, button, pressed):
                 stage.append(act)
             else:
                 act = action(state='box', coords_list=[{'x': _click_int_x, 'y': _click_int_y}, {'x': _int_x, 'y': _int_y}])
+                act._set_ssim()
                 stage.append(act)
 
 def on_move(x, y):
@@ -244,6 +245,7 @@ class action:
     _coords_list = None
     _keyboard_buffer = None
     _ssim_filename = None
+    _ssim_score = None
 
     # [Initializer from scratch]:
     def __init__(self, state=None, coords_list=None, keyboard_buffer=None, JSON_STR=None):
@@ -260,6 +262,13 @@ class action:
             # [Class ID incremetor]:
             action._id+=1
 
+            # [If BOX try to Capture screenshot from coords]: (for SSIM)
+            if self._state == 'box':
+                _ssim_control = stage._sp.grab_rect(self._coords_list[0],self._coords_list[1], mod=2)
+                
+                self._ssim_filename = '{0}_action{1}.png'.format(('SEQ' if stage._file_name is None else stage._file_name[:-5]), self._action_id)
+                imageio.imwrite(self._ssim_filename, _ssim_control)
+
             self._PRINT('Added')
         else:
             # [Should only ever be 1 key, but whatever]:
@@ -269,15 +278,21 @@ class action:
                 self._action_id = JSON_DATA.get('_action_id')
                 self._coords_list = JSON_DATA.get('_coords_list')
                 self._keyboard_buffer = JSON_DATA.get('_keyboard_buffer')
+                self._ssim_filename = JSON_DATA.get('_ssim_filename')
                 self._PRINT('Loaded')
 
-        # [If BOX try to Capture screenshot from coords]: (for SSIM)
-        if self._state == 'box':
-            _ssim_control = stage._sp.grab_rect(self._coords_list[0],self._coords_list[1], mod=1)
-            #_ssim_resized = stage._sp.resize_image(_ssim_control, scale_percent=50) # Resize image
+    def _set_ssim(self):
+        control = imageio.imread(self._ssim_filename)
+        test = stage._sp.grab_rect(self._coords_list[0],self._coords_list[1], mod=2)
+        self._ssim_score  = stage._sp.check_ssim(control, test)
 
-            self._ssim_filename = '{0}_action{1}.png'.format('SEQ', self._action_id)
-            imageio.imwrite(self._ssim_filename, _ssim_control)
+    def _check_ssim(self, thresh=.9):
+        control = imageio.imread(self._ssim_filename)
+        test = stage._sp.grab_rect(self._coords_list[0],self._coords_list[1], mod=2)
+        imageio.imwrite('{0}_action{1}.png'.format('TEST', self._action_id), test)
+        ssim_score = stage._sp.check_ssim(control, test)
+        print("SAVED_SSIM: {}".format(self._ssim_score))
+        return True if (ssim_score > thresh) else False
 
     def _RUN(self):
         self._PRINT('Replay')
@@ -296,8 +311,8 @@ class action:
 
         # [KEY| Special Keys]:
         if self._state == 'key':
-            _kb_ctrl.press(self.str_to_key(self._keyboard_buffer))
-            _kb_ctrl.release(self.str_to_key(self._keyboard_buffer))
+            _kb_ctrl.press(stage.str_to_key(self._keyboard_buffer))
+            _kb_ctrl.release(stage.str_to_key(self._keyboard_buffer))
             time.sleep(.1)
 
         # [PASS| Enter password]:
@@ -309,9 +324,14 @@ class action:
 
             pyautogui.typewrite(self._keyboard_buffer, interval=.1)
 
-        # [BOX| SSIM?]:
+        # [BOX| CHECK SSIM]:
         if self._state == 'box':
-            print('SSIM?: {0}'.format(self._ssim_filename))
+            if self._check_ssim():
+                print('[passed]')
+            else:
+                print('[failed]')
+
+            # [Draw box coords specified]:
             _start_x = self._coords_list[0].get('x')
             _start_y = self._coords_list[0].get('y')
             _stop_x = self._coords_list[1].get('x')
@@ -319,11 +339,6 @@ class action:
             _diff_x = (_stop_x - _start_x)
             _diff_y = (_stop_y - _start_y)
 
-            control = imageio.imread(self._ssim_filename)
-            test = stage._sp.grab_rect(self._coords_list[0],self._coords_list[1], mod=1)
-            stage._sp.check_ssim(control, test, thresh=.9)
-
-            # [Draw box coords specified]:
             pyautogui.moveTo(_start_x, _start_y, duration=1)
             pyautogui.moveTo((_start_x+_diff_x),_start_y, duration=1)
             pyautogui.moveTo((_start_x+_diff_x),(_start_y+_diff_y), duration=1)
@@ -344,7 +359,10 @@ class action:
             if self._keyboard_buffer is None or self._state == 'pass':
                 print('{0} action{1}({2}): {3}'.format(act, self._action_id, self._state, _coord))
             else:
-                print('{0} action{1}({2}): {3} | {4}'.format(act, self._action_id, self._state, _coord, self._keyboard_buffer))
+                if self._ssim_score is not None:
+                    print('{0} action{1}({2}): {3} | {4} | {5}'.format(act, self._action_id, self._state, _coord, self._keyboard_buffer, self._ssim_score))
+                else:
+                    print('{0} action{1}({2}): {3} | {4}'.format(act, self._action_id, self._state, _coord, self._keyboard_buffer))
 
 
 # [Iterator class]:
@@ -369,12 +387,13 @@ class action_iterator:
 # [Stage Manager to organize actions]:
 class stage_manager:
     _sp = None
-
+    _file_name = None
     _action_items = None
 
-    def __init__(self):
-        self._sp = screen_pixel.screen_pixel()
+    def __init__(self, file_name):
         self._action_items = []
+        self._file_name = file_name
+        self._sp = screen_pixel.screen_pixel()
 
     def __iter__(self):
         return action_iterator(self)
@@ -392,10 +411,12 @@ class stage_manager:
         if file_name is None:
             file_name = input('What would you like the filename to be?: ')
 
+        self._file_name = file_name
+
         for act in self:
             # [Rename SEQ_action0.png to use file_name]
             if act._state == 'box':
-                _file_mask = '{0}_action{1}.png'.format(file_name[:-5], act._action_id)
+                _file_mask = '{0}_action{1}.png'.format(self._file_name[:-5], act._action_id)
                 shutil.move(act._ssim_filename, _file_mask)
                 act._ssim_filename = _file_mask
 
@@ -444,6 +465,7 @@ class stage_manager:
 
 # [-]: Grayscale and save _ssim_control_filename images; Compare to grab_rect taken at replay
 # [-]: Ability to capture Replay of actions (going through form) and (rather than using captured keystrokes) pass in data for replay
+# [-]: > Click URL bar, pass in: https://www.websitedimensions.com/pixel/
 # [0]: (Merge listeners into 1 class / Merge controllers into 1 class)
 # [1]: (use BOX coords for SSIM checking)
 # [2]: MIRROR actions across screen / can set up same page on left/right screen, record on left, and replay on right.
@@ -451,14 +473,6 @@ class stage_manager:
 # https://pythonhosted.org/pynput/mouse.html#controlling-the-mouse
 # https://pythonhosted.org/pynput/keyboard.html#controlling-the-keyboard
 if __name__ == "__main__":
-    # [GLOBALS]:
-    _kb_ctrl = kb.Controller()
-    _ms_ctrl = ms.Controller()
-    stage = stage_manager()
-    mouse_listener = ms.Listener(on_click=on_click, on_move=on_move)
-    keyboard_listener = kb.Listener(on_press=on_press, on_release=on_release)
-    # ^(non-blocking mouse/keyboard listener)
-
     # [Check command line arguments for mode]:
     try:
         _mode = sys.argv[1]
@@ -475,10 +489,18 @@ if __name__ == "__main__":
     except:
         _file_name = None
 
+    # [GLOBALS]:
+    _kb_ctrl = kb.Controller()
+    _ms_ctrl = ms.Controller()
+    stage = stage_manager(_file_name)
+    mouse_listener = ms.Listener(on_click=on_click, on_move=on_move)
+    keyboard_listener = kb.Listener(on_press=on_press, on_release=on_release)
+    # ^(non-blocking mouse/keyboard listener)
+
     # [Replay from file]:
     if 'replay' in _mode:
-        if _file_name and '.json' in _file_name:
-            stage.load_sequence(_file_name)
+        if stage._file_name and '.json' in stage._file_name:
+            stage.load_sequence(stage._file_name)
             stage.replay_sequence()
             stage.replay_loop_check()
         else:
@@ -499,11 +521,14 @@ if __name__ == "__main__":
             stage.replay_sequence()
 
             # [Saving sequence to JSON file for replay]:
-            if _file_name is None:
+            if stage._file_name is None:
                 _file_name = input('[Do you wish to save replay?] (`filename.json` for yes): ')
 
             if _file_name != '':
                 stage.save_sequence(_file_name)
+            else:
+                # [Cleanup unsaved files]:
+                shutil.remove('SEQ_*.png')
 
             stage.replay_loop_check()
 
