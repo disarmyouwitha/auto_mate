@@ -3,10 +3,7 @@ import os
 import sys
 import time
 import json
-import glob
 import numpy
-import pandas
-#import codecs
 import base64
 import shutil
 import imageio
@@ -252,11 +249,10 @@ class action:
     _id = 0
     _state = None
     _action_id = 0
+    _ssim_score = None
     _coords_list = None
     _keyboard_buffer = None
-    _ssim_score = None
-    _control_64 = None
-    _control_shape = None
+    _control_numpy_save = None
 
     # [Initializer from scratch]:
     def __init__(self, state=None, coords_list=None, keyboard_buffer=None, JSON_STR=None):
@@ -276,9 +272,7 @@ class action:
             # [If BOX try to Capture screenshot from coords]: (for SSIM)
             if self._state == 'box':
                 _numpy_array = stage._sp.grab_rect(self._coords_list[0],self._coords_list[1], mod=(2 if _RETINA else 1), nemo=stage._sp._numpy)
-                _numpy_bytes = _numpy_array.tobytes()
-                self._control_shape = _numpy_array.shape
-                self._control_64 = base64.b64encode(_numpy_bytes)
+                self._control_numpy_save= (_numpy_array.shape, base64.b64encode(_numpy_array.tobytes()))
                 self._set_ssim(stage._sp._numpy)
             self._PRINT('Added')
         else:
@@ -293,14 +287,14 @@ class action:
                 stage._sp.capture()
 
             if self._state == 'box':
-                self._control_shape = JSON_DATA.get('_control_shape')
-                self._control_64 = JSON_DATA.get('_control_64')
                 self._ssim_score = JSON_DATA.get('_ssim_score')
+                self._control_numpy_save = JSON_DATA.get('_control_numpy_save')
             self._PRINT('Loaded')
 
     def _set_ssim(self, nemo=0):
-        _control_bytes = base64.b64decode(self._control_64)
-        _control_array = numpy.frombuffer(_control_bytes, dtype='uint8').reshape(self._control_shape)
+        (_control_shape, _control_64) = self._control_numpy_save
+        _control_bytes = base64.b64decode(_control_64)
+        _control_array = numpy.frombuffer(_control_bytes, dtype='uint8').reshape(_control_shape)
         test = stage._sp.grab_rect(self._coords_list[0],self._coords_list[1], mod=(2 if _RETINA else 1), nemo=nemo)
         self._ssim_score  = stage._sp.check_ssim(_control_array, test)
 
@@ -309,8 +303,9 @@ class action:
             imageio.imwrite('SSIM_test.png', test) ## 
 
     def _check_ssim(self, thresh=.9):
-        _control_bytes = base64.b64decode(self._control_64)
-        _control_array = numpy.frombuffer(_control_bytes, dtype='uint8').reshape(self._control_shape)
+        (_control_shape, _control_64) = self._control_numpy_save
+        _control_bytes = base64.b64decode(_control_64)
+        _control_array = numpy.frombuffer(_control_bytes, dtype='uint8').reshape(_control_shape)
         test = stage._sp.grab_rect(self._coords_list[0],self._coords_list[1], mod=(2 if _RETINA else 1))
         ssim_score = stage._sp.check_ssim(_control_array, test)
 
