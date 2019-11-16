@@ -20,7 +20,8 @@ import pynput.keyboard as kb
 from pynput.mouse import Button, Controller
 from pynput.keyboard import Key, Controller
 
-_RETINA = False
+_DEBUGG = False
+_RETINA = True
 pyautogui.PAUSE = 0
 pyautogui.FAILSAFE = True
 
@@ -29,7 +30,6 @@ if sys.platform == 'darwin':
     if os.getuid() != 0:
         print('[If you are using OSX, please run as root: `sudo python3 auto_mate.py`]')
         os._exit(1)
-_RETINA = False
 
 # [GLOBALS]:
 _record = 1
@@ -301,18 +301,22 @@ class action:
     def _set_ssim(self, nemo=0):
         _control_bytes = base64.b64decode(self._control_64)
         _control_array = numpy.frombuffer(_control_bytes, dtype='uint8').reshape(self._control_shape)
-        #imageio.imwrite('SSIM_control.png', _control_array) ## 
         test = stage._sp.grab_rect(self._coords_list[0],self._coords_list[1], mod=(2 if _RETINA else 1), nemo=nemo)
-        #imageio.imwrite('SSIM_test.png', test) ## 
         self._ssim_score  = stage._sp.check_ssim(_control_array, test)
+
+        if _DEBUGG:
+            imageio.imwrite('SSIM_control.png', _control_array) ## 
+            imageio.imwrite('SSIM_test.png', test) ## 
 
     def _check_ssim(self, thresh=.9):
         _control_bytes = base64.b64decode(self._control_64)
         _control_array = numpy.frombuffer(_control_bytes, dtype='uint8').reshape(self._control_shape)
-        #imageio.imwrite('{0}_action{1}.png'.format('CONTROL', self._action_id), _control_array) ##
         test = stage._sp.grab_rect(self._coords_list[0],self._coords_list[1], mod=(2 if _RETINA else 1))
-        #imageio.imwrite('{0}_action{1}.png'.format('TEST', self._action_id), test) ##
         ssim_score = stage._sp.check_ssim(_control_array, test)
+
+        if _DEBUGG:
+            imageio.imwrite('{0}_action{1}.png'.format('CONTROL', self._action_id), _control_array) ##
+            imageio.imwrite('{0}_action{1}.png'.format('TEST', self._action_id), test) ##
 
         #print("SAVED_SSIM: {}".format(self._ssim_score))
         # ^(Can probably compared new_ssim to saved_ssim for more accurate results)
@@ -356,21 +360,21 @@ class action:
             else:
                 print('[failed]')
 
-            '''
             # [Draw box coords specified]:
-            _start_x = self._coords_list[0].get('x')
-            _start_y = self._coords_list[0].get('y')
-            _stop_x = self._coords_list[1].get('x')
-            _stop_y = self._coords_list[1].get('y')
-            _diff_x = (_stop_x - _start_x)
-            _diff_y = (_stop_y - _start_y)
+            _draw_box = False
+            if _draw_box:
+                _start_x = self._coords_list[0].get('x')
+                _start_y = self._coords_list[0].get('y')
+                _stop_x = self._coords_list[1].get('x')
+                _stop_y = self._coords_list[1].get('y')
+                _diff_x = (_stop_x - _start_x)
+                _diff_y = (_stop_y - _start_y)
 
-            pyautogui.moveTo(_start_x, _start_y, duration=1)
-            pyautogui.moveTo((_start_x+_diff_x),_start_y, duration=1)
-            pyautogui.moveTo((_start_x+_diff_x),(_start_y+_diff_y), duration=1)
-            pyautogui.moveTo(_start_x,(_start_y+_diff_y), duration=1)
-            pyautogui.moveTo(_start_x,_start_y, duration=1)
-            '''
+                pyautogui.moveTo(_start_x, _start_y, duration=1)
+                pyautogui.moveTo((_start_x+_diff_x),_start_y, duration=1)
+                pyautogui.moveTo((_start_x+_diff_x),(_start_y+_diff_y), duration=1)
+                pyautogui.moveTo(_start_x,(_start_y+_diff_y), duration=1)
+                pyautogui.moveTo(_start_x,_start_y, duration=1)
 
         # [1sec pause]:
         time.sleep(1)
