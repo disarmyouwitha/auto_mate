@@ -20,16 +20,13 @@ def timer(msg):
     print('%s: %.02fms'%(msg, (end-start)*1000))
 
 
-# [-]: Need internal state for holding/pressing keys (?) Can allow outside of record (?) <- Try changing delay first..
-# ^ If (another) key is pressed during HOLD state -- immediately release that key
-# [-]: If key is pressed while hold is pressed; it should release 
-# [0]: Replay alt-tabs
-# [1]: Option to save to file/filename_string instead of b64_bytes
-# [2]: MIRROR actions across screen / can set up same page on left/right screen, record on left, and replay on right.
-# [3]: Ability to capture Replay of actions (going through form) and (rather than using captured keystrokes) pass in data for replay
-#  >>> Click URL bar, pass in: https://www.websitedimensions.com/pixel/
-# https://pythonhosted.org/pynput/
-# https://pyautogui.readthedocs.io/en/latest/cheatsheet.html
+# [https://pythonhosted.org/pynput/]
+# [https://pyautogui.readthedocs.io/en/latest/cheatsheet.html]
+# [0]: remove tab sequences from command input (reconsider how ESC works)
+# [1]: IF BOX "DRAWN BACKWARDS".. USER WAS HIGHLIGHTING TEXT FOR COPY/PASTE (don't capture/try to SSIM)
+# [2]: Option to save to file/filename_string instead of b64_bytes
+# [3]: MIRROR actions across screen / can set up same page on left/right screen, record on left, and replay on right.
+# [4]: Ability to capture Replay of actions (going through form) BUT rather than using captured keystrokes, pass in data for replay
 if __name__ == "__main__":
     # [Check command line arguments for mode]:
     try:

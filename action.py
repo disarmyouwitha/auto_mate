@@ -127,8 +127,6 @@ class action:
             (_key_list, _pressed) = stage._omni._str_to_key(self._keyboard_buffer)
             _key= _key_list[0]
 
-            # if 3, keep doing action with modifier until 1/0; pass over sleep until 1-3-3-3-0
-
             if _pressed==1: # press
                 stage._omni.PRESS(_key)
             elif _pressed==0: # release
@@ -147,10 +145,7 @@ class action:
             _x = self._coords_list[0].get('x')
             _y = self._coords_list[0].get('y')
             pyautogui.click(x=_x, y=_y, button='left', clicks=1)
-
             pyautogui.typewrite(self._keyboard_buffer, interval=.1)
-
-        # IF BOX "DRAWN BACKWARDS".. USER WAS HIGHLIGHTING TEXT FOR COPY/PASTE
 
         # [BOX| CHECK SSIM]:
         if self._state == 'box':
