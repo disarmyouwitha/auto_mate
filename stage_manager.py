@@ -1,3 +1,4 @@
+import sys
 import time
 import json
 import action
@@ -8,6 +9,7 @@ import omni_listener
 class stage_manager:
     _sp = None
     _omni = None
+    _record = None
     _file_name = None
     _action_items = None
 
@@ -20,7 +22,7 @@ class stage_manager:
     def __iter__(self):
         return action.action_iterator(self)
 
-    def append(self, action):
+    def _append(self, action):
         self._action_items.append(action)
 
     def save_sequence(self, file_name=None):
@@ -54,10 +56,11 @@ class stage_manager:
             self._action_items.append(act)
 
     def RECORD(self):
+        self._record = 1
         with self._omni.mouse_listener, self._omni.keyboard_listener:
             # [Recording loop]:
             print('[Mouse/Keyboard listening! Press CTRL to stop recording]')
-            while self._omni._record > 0:
+            while self._record > 0:
                 time.sleep(1) #pass (?)
 
             print('[Starting Replay]: 2sec')
@@ -80,6 +83,7 @@ class stage_manager:
             self._replay_loop_check()
 
     def REPLAY(self):
+        self._record = 0
         if self._file_name and '.json' in self._file_name:
             self.load_sequence(self._file_name)
             self._replay_sequence()
@@ -102,6 +106,7 @@ class stage_manager:
                 _again = input('[Do you wish to Replay again?] (N for no, # for loop): ')
                 _again_bytes = bytes(_again, "utf-8")
 
+                # [NEED TO REMOVE \t TABS TOO]:
                 # [If ESC present.. remove it!]:
                 if b'\x1b' in _again_bytes:
                     _again_bytes_array = bytearray(_again_bytes)

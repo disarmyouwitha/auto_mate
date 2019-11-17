@@ -105,20 +105,18 @@ class action:
 
         return True if (ssim_score >= thresh) else False
 
-    def str_to_key(self, str):
-        (_class, _key) = str.split('.') 
-        return getattr(sys.modules[__name__], _class)[_key]
-
     def RUN(self, stage):
         self._PRINT('Replay')
+        _SKIP_SLEEP = False
 
         # [CLICK| Click Position]: 
-        # ^(Need to check click/double-click for replay)
         if self._state == 'click':
             _x = self._coords_list[0].get('x')
             _y = self._coords_list[0].get('y')
             pyautogui.moveTo(_x, _y, duration=1)
-            stage._omni._ms_ctrl.click(stage._omni._ms_button.left, 1) # pyautogui wont change active window (OSX)
+            stage._omni.CLICK('left', 1)
+            # ^(Need to check click/double-click for replay)
+            # ^(Need to check left click vs right click)
 
         # [KEYBOARD| replay typing]:
         if self._state == 'keyboard':
@@ -126,9 +124,22 @@ class action:
 
         # [KEY| Special Keys]:
         if self._state == 'key':
-            stage._omni._kb_ctrl.press(self.str_to_key(self._keyboard_buffer))
-            stage._omni._kb_ctrl.release(self.str_to_key(self._keyboard_buffer))
-            time.sleep(.1)
+            (_key_list, _pressed) = stage._omni._str_to_key(self._keyboard_buffer)
+            _key= _key_list[0]
+
+            # if 3, keep doing action with modifier until 1/0; pass over sleep until 1-3-3-3-0
+
+            if _pressed==1: # press
+                stage._omni.PRESS(_key)
+            elif _pressed==0: # release
+                stage._omni.RELEASE(_key)
+            elif _pressed==3: # tap
+                stage._omni.PRESS(_key)
+                stage._omni.RELEASE(_key)
+                _SKIP_SLEEP = True
+
+            if _SKIP_SLEEP:
+                time.sleep(.1)
 
         # [PASS| Enter password]:
         if self._state == 'pass':
@@ -163,7 +174,8 @@ class action:
                 pyautogui.moveTo(_start_x,_start_y, duration=1)
 
         # [1sec pause]:
-        time.sleep(1)
+        if _SKIP_SLEEP:
+            time.sleep(1)
 
     # [Serializer]:
     def _JSON(self):

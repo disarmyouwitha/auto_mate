@@ -20,6 +20,9 @@ def timer(msg):
     print('%s: %.02fms'%(msg, (end-start)*1000))
 
 
+# [-]: Need internal state for holding/pressing keys (?) Can allow outside of record (?) <- Try changing delay first..
+# ^ If (another) key is pressed during HOLD state -- immediately release that key
+# [-]: If key is pressed while hold is pressed; it should release 
 # [0]: Replay alt-tabs
 # [1]: Option to save to file/filename_string instead of b64_bytes
 # [2]: MIRROR actions across screen / can set up same page on left/right screen, record on left, and replay on right.
@@ -47,10 +50,10 @@ if __name__ == "__main__":
     # [Set the stage, let the actors play]:
     stage = stage_manager.stage_manager(_file_name)
 
-    if 'replay' in _mode:
-        stage.REPLAY()
-
     if 'record' in _mode:
         stage.RECORD()
+
+    if 'replay' in _mode:
+        stage.REPLAY()
 
     print('[fin.]')
