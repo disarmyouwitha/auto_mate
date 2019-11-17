@@ -1,4 +1,3 @@
-import io
 import os
 import sys
 import time
@@ -7,7 +6,6 @@ import numpy
 import base64
 import shutil
 import imageio
-import threading
 import pyautogui
 import contextlib
 import jsonpickle
@@ -42,6 +40,7 @@ _click_int_y = None
 # [KEYBOARD GLOBALS]:
 _typed_last = 0
 _keyboard_buffer = ''
+_hold_ESC = False
 _hold_ALT = False
 _hold_TAB = False
 _hold_CMD = False
@@ -50,7 +49,7 @@ _hold_SHIFT = False
 _CMD_input = False
 
 def on_press(key):
-    global _record, _typed_last, _keyboard_buffer, _click_int_x, _click_int_y, _hold_SHIFT, _hold_ALT, _hold_TAB, _hold_CTRL, _hold_CMD, _CMD_input
+    global _record, _typed_last, _keyboard_buffer, _click_int_x, _click_int_y, _hold_SHIFT, _hold_ALT, _hold_TAB, _hold_CTRL, _hold_CMD, _hold_ESC, _CMD_input
 
     if _record > 0:
         # [CMD_input for passwords, etc]:
@@ -116,11 +115,16 @@ def on_press(key):
                 else: # [Add TAB key]:
                     _pass_thru = True
 
+            # [If ESC key pressed]:
+            if key == kb.Key.esc:
+                _hold_ESC = True
+                _record = 0
+                print('[Listeners "stopped"]')
+
+
             # [If CTRL key pressed]:
             if key == kb.Key.ctrl:
                 _hold_CTRL = True
-                _record = 0
-                print('[Listeners "stopped"]')
 
             # [If ENTER key pressed]:
             if key == kb.Key.enter:
@@ -142,10 +146,10 @@ def on_press(key):
                 act = action(state='key', coords_list={'x': _click_int_x, 'y': _click_int_y}, keyboard_buffer=key)
                 stage.append(act)
 
-            CHECK_KEYBOARD_EMERGENCY(_hold_CTRL, _hold_SHIFT)
+            CHECK_KEYBOARD_EMERGENCY(_hold_ESC, _hold_SHIFT)
 
 def on_release(key):
-    global _record, _hold_SHIFT, _hold_ALT, _hold_TAB, _hold_CTRL
+    global _record, _hold_SHIFT, _hold_ALT, _hold_TAB, _hold_CTRL, _hold_ESC
 
     if _record > 0:
         if key == kb.Key.alt:
@@ -159,6 +163,9 @@ def on_release(key):
 
         if key == kb.Key.ctrl:
             _hold_CTRL = False
+
+        if key == kb.Key.esc:
+            _hold_ESC = False
 
         if key == kb.Key.cmd:
             _hold_CMD = False
@@ -176,7 +183,7 @@ def check_keyboard_buffer(interrupt=False):
         _typed_last=0
 
 def on_click(x, y, button, pressed):
-    global _record, _click_int_x, _click_int_y, _hold_SHIFT, _CMD_input
+    global _record, _click_int_x, _click_int_y, _hold_SHIFT, _hold_ESC, _CMD_input
     _int_x = int(x)
     _int_y = int(y)
 
@@ -230,9 +237,9 @@ def CHECK_MOUSE_EMERGENCY(_int_x, _int_y):
         print('[MOUSE_PANIC_EXIT]')
         os._exit(1)
 
-# [SHIFT+CTRL is emergency exit condition]:
-def CHECK_KEYBOARD_EMERGENCY(_hold_CTRL, _hold_SHIFT):
-    if _hold_CTRL and _hold_SHIFT:
+# [SHIFT+ESC is emergency exit condition]:
+def CHECK_KEYBOARD_EMERGENCY(_hold_ESC, _hold_SHIFT):
+    if _hold_ESC and _hold_SHIFT:
         print('[KEYBOARD_PANIC_EXIT]')
         os._exit(1)
 
@@ -474,6 +481,14 @@ class stage_manager:
             _again-=1
             if _again==0:
                 _again = input('[Do you wish to Replay again?] (N for no, # for loop): ')
+                _again_bytes = bytes(_again, "utf-8")
+
+                # [If ESC present.. remove it!]:
+                if b'\x1b' in _again_bytes:
+                    _again_bytes_array = bytearray(_again_bytes)
+                    del _again_bytes_array[0]
+                    _again = _again_bytes_array.decode('utf-8')
+
                 if _again.isalpha() or _again=='':
                     _again = 0 if (_again.lower() == 'n' or _again.lower() == 'no') else 1
                 else:
@@ -483,15 +498,13 @@ class stage_manager:
                 self.replay_sequence()
 
 
-# [-]: Check size of JSON file for little grab? for big?
-# [-]: ESC for EXIT rather than control
 # [-]: Replay alt-tabs
-# https://pythonhosted.org/pynput/
-# https://pyautogui.readthedocs.io/en/latest/cheatsheet.html
 # [0]: (Merge listeners into 1 class / Merge controllers into 1 class)
 # [1]: Ability to capture Replay of actions (going through form) and (rather than using captured keystrokes) pass in data for replay
 #  >>> Click URL bar, pass in: https://www.websitedimensions.com/pixel/
 # [2]: MIRROR actions across screen / can set up same page on left/right screen, record on left, and replay on right.
+# https://pythonhosted.org/pynput/
+# https://pyautogui.readthedocs.io/en/latest/cheatsheet.html
 if __name__ == "__main__":
     # [Check command line arguments for mode]:
     try:
