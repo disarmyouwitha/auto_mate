@@ -17,12 +17,11 @@ class omni_listener():
     _ms_ctrl = None
 
     # [MOUSE GLOBALS]:
-    _click_int_x = None
-    _click_int_y = None
+    _last_int_x = None
+    _last_int_y = None
 
     # [KEYBOARD GLOBALS]:
     _typed_last = 0
-    _keyboard_buffer = ''
     _hold_ESC = False
     _hold_ALT = False
     _hold_TAB = False
@@ -30,6 +29,7 @@ class omni_listener():
     _hold_CTRL = False
     _hold_SHIFT = False
     _PASS_input = False
+    _keyboard_buffer = ''
 
     def __init__(self, stage=None):
         self._stage = stage
@@ -109,7 +109,7 @@ class omni_listener():
                     if len(self._keyboard_buffer) > 0:
                         self._keyboard_buffer = self._keyboard_buffer[:-1]
                     else: # [Otherwise add as special character for replay?]:
-                        act = action(state='key', coords_list={'x': self._click_int_x, 'y': self._click_int_y}, keyboard_buffer=key, stage=self._stage)
+                        act = action(state='key', coords_list={'x': self._last_int_x, 'y': self._last_int_y}, keyboard_buffer=key, stage=self._stage)
                         self._stage._append(act)
 
                 # [Add space for spacebar xD]:
@@ -139,7 +139,6 @@ class omni_listener():
             if self._hold_CMD == False:
                 self._hold_CMD = True
                 _pass_thru = True
-                #print('_hold_CMD')
 
         # [If SHIFT is pressed]: (Don't accept HELD tab as multiple presses)
         if key == kb.Key.shift:
@@ -247,7 +246,7 @@ class omni_listener():
         if interrupt==True or ((self._typed_last > 0) and (time.time() - self._typed_last) >= 2):
             if self._keyboard_buffer != '':
                 # [Action for Keyboard takes x,y of last click and keyboard_buffer]:
-                act = action(state='keyboard', coords_list={'x': self._click_int_x, 'y': self._click_int_y}, keyboard_buffer=self._keyboard_buffer, stage=self._stage)
+                act = action(state='keyboard', coords_list={'x': self._last_int_x, 'y': self._last_int_y}, keyboard_buffer=self._keyboard_buffer, stage=self._stage)
                 self._stage._append(act)
 
             self._keyboard_buffer=''
@@ -261,8 +260,8 @@ class omni_listener():
             self._check_keyboard_buffer(interrupt=True)
 
             if pressed:
-                self._click_int_x = int(x)
-                self._click_int_y = int(y)
+                self._last_int_x = int(x)
+                self._last_int_y = int(y)
 
                 # [Capture screen on click]: (For clean drag event)
                 self._stage._sp.capture()
@@ -276,18 +275,18 @@ class omni_listener():
                 if self._hold_SHIFT:
                     self._PASS_input = True
                     _pass = input('Enter password here: ')
-                    act = action(state='pass', coords_list={'x': self._click_int_x, 'y': self._click_int_y}, keyboard_buffer=_pass, stage=self._stage)
+                    act = action(state='pass', coords_list={'x': self._last_int_x, 'y': self._last_int_y}, keyboard_buffer=_pass, stage=self._stage)
                     self._stage._append(act)
 
                     print('Click field to resume! / Please use Submit instead of Enter')
                     return
 
                 # [SAME = CLICK | DIFF = BOX]:
-                if abs(_int_x-self._click_int_x) < 5 and abs(_int_y-self._click_int_y) < 5:
+                if abs(_int_x-self._last_int_x) < 5 and abs(_int_y-self._last_int_y) < 5:
                     act = action(state='click', coords_list=[{'x': _int_x, 'y': _int_y}], stage=self._stage)
                     self._stage._append(act)
                 else:
-                    act = action(state='box', coords_list=[{'x': self._click_int_x, 'y': self._click_int_y}, {'x': _int_x, 'y': _int_y}], stage=self._stage)
+                    act = action(state='box', coords_list=[{'x': self._last_int_x, 'y': self._last_int_y}, {'x': _int_x, 'y': _int_y}], stage=self._stage)
                     self._stage._append(act)
 
     def on_move(self, x, y):
