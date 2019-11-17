@@ -150,6 +150,8 @@ class action:
 
             pyautogui.typewrite(self._keyboard_buffer, interval=.1)
 
+        # IF BOX "DRAWN BACKWARDS".. USER WAS HIGHLIGHTING TEXT FOR COPY/PASTE
+
         # [BOX| CHECK SSIM]:
         if self._state == 'box':
             if self.check_ssim(stage=stage, thresh=1):
