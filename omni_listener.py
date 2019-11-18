@@ -28,6 +28,7 @@ class omni_listener():
     _hold_SHIFT = False
     _PASS_input = False
     _keyboard_buffer = ''
+    _keyboard_buffer
 
     def __init__(self, stage=None):
         self._stage = stage
@@ -42,12 +43,6 @@ class omni_listener():
     def CHECK_MOUSE_EMERGENCY(self, _int_x, _int_y):
         if _int_x == 0 and _int_y == 0:
             print('[MOUSE_PANIC_EXIT]')
-            os._exit(1)
-
-    # [SHIFT+ESC is emergency exit condition]:
-    def CHECK_KEYBOARD_EMERGENCY(self):
-        if self._hold_ESC and self._hold_SHIFT:
-            print('[KEYBOARD_PANIC_EXIT]')
             os._exit(1)
 
     def CLICK(self, which_click='left', num_clicks=1, type_click='click'):
@@ -107,13 +102,15 @@ class omni_listener():
                 # [If _held_keys treat as char in sequence]:
                 _held_keys = self._held_keys()
                 _held_cnt = len(_held_keys)
-                if _held_cnt >= 1:
+                if _held_cnt >= 2:
                     self._check_keyboard_buffer(interrupt=True)
 
             except AttributeError:
                 # [Pass-through on other special characters]: 
                 #print('special key {0} pressed'.format(key))
                 # ^DEBUGG
+
+                self._last_typed = 0 #time.time()
 
                 # [if backspace, pop last character from buffer]:
                 if key == kb.Key.backspace:
@@ -136,7 +133,6 @@ class omni_listener():
                 self._handle_special_press(key)
 
     def _handle_special_press(self, key):
-        # self.CHECK_KEYBOARD_EMERGENCY() ??
         _pass_thru = False
 
         # [If ALT key pressed]: (Don't accept HELD tab as multiple presses)
@@ -157,22 +153,23 @@ class omni_listener():
                 self._hold_SHIFT = True
                 _pass_thru = True
 
-        # [If TAB key pressed]: (Don't accept HELD tab as multiple presses)
-        if key == kb.Key.tab:
-            if self._hold_TAB == False:
-                self._hold_TAB = True
-                _pass_thru = True
-
         # [If CTRL key pressed]: (Don't accept HELD tab as multiple presses)
         if key == kb.Key.ctrl:
             if self._hold_CTRL == False:
                 self._hold_CTRL = True
                 _pass_thru = True
 
-        # [If ENTER key pressed]:
+        # [If ENTER key pressed]: (ENTER will reset _keyboard_buffer)
         if key == kb.Key.enter:
             self._check_keyboard_buffer(interrupt=True)
             _pass_thru = True
+
+        # [If TAB key pressed]: (ENTER will reset _keyboard_buffer)
+        if key == kb.Key.tab:
+            if self._hold_TAB == False:
+                self._hold_TAB = True
+                _pass_thru = True
+                self._check_keyboard_buffer(interrupt=True)
 
         # [If ARROW key pressed]: (Held keys?)
         if key == kb.Key.up:
@@ -186,26 +183,27 @@ class omni_listener():
 
         # [Add pressed key to action list]:
         if self._stage._record > 0 and _pass_thru:
-            _held_keys = self._held_keys()
-            _held_cnt = len(_held_keys)
+            # [If _keyboard_buffer is empty (user is not typing) add Key action]:
+            if len(self._keyboard_buffer) == 0:
+                _held_keys = self._held_keys()
+                _held_cnt = len(_held_keys)
 
-            if key in _held_keys:
-                _held_keys.remove(key)
+                # [Remove self from _held_keys]:
+                if key in _held_keys:
+                    _held_keys.remove(key)
 
-            if _held_cnt<=1:
-                key_pressed = '{0}|{1}'.format(key, 1)
-            else:
-                key_pressed = ''
-                key_pressed+= '{0}|'.format(key)
-                for _key in _held_keys:
-                    key_pressed+= '{0}|'.format(_key)
-                key_pressed = '{0}|{1}'.format(key_pressed[:-1], 3)
+                if _held_cnt<=1:
+                    key_pressed = '{0}|{1}'.format(key, 1)
+                else:
+                    key_pressed = ''
+                    key_pressed+= '{0}|'.format(key)
+                    for _key in _held_keys:
+                        key_pressed+= '{0}|'.format(_key)
+                    key_pressed = '{0}|{1}'.format(key_pressed[:-1], 3)
 
-            # [Check if key combination was pressed, send that instead]:
-            act = action(state='key', coords_list={'x': None, 'y': None}, keyboard_buffer=key_pressed, stage=self._stage)
-            self._stage._append(act)
-
-        self.CHECK_KEYBOARD_EMERGENCY()
+                # [Check if key combination was pressed, send that instead]:
+                act = action(state='key', coords_list={'x': None, 'y': None}, keyboard_buffer=key_pressed, stage=self._stage)
+                self._stage._append(act)
 
     # [Check HELD status of keys]:
     def _held_keys(self):
@@ -229,7 +227,7 @@ class omni_listener():
     def on_release(self, key):
         if self._stage._record > 0:
             self._check_keyboard_buffer()
-        self._handle_special_release(key)
+            self._handle_special_release(key)
 
     # [Special conditions on release]:
     def _handle_special_release(self, key):
@@ -250,9 +248,11 @@ class omni_listener():
 
             # [Add released key to action list]: (if recording)
             if self._stage._record > 0:
-                key_pressed = '{0}|{1}'.format(key, 0)
-                act = action(state='key', coords_list={'x': None, 'y': None}, keyboard_buffer=key_pressed, stage=self._stage)
-                self._stage._append(act)
+                # [If _keyboard_buffer is empty (user is not typing) add Key action]:
+                if len(self._keyboard_buffer) == 0:
+                    key_pressed = '{0}|0'.format(key)
+                    act = action(state='key', coords_list={'x': None, 'y': None}, keyboard_buffer=key_pressed, stage=self._stage)
+                    self._stage._append(act)
 
     def _check_keyboard_buffer(self, interrupt=False):
         if interrupt==True or ((self._last_typed > 0) and (time.time() - self._last_typed) >= 2):
@@ -337,7 +337,6 @@ class omni_listener():
         _int_y = int(y)
 
         self.CHECK_MOUSE_EMERGENCY(_int_x, _int_y)
-        self.CHECK_KEYBOARD_EMERGENCY()
         # IF ANY MOVEMENT DURING self._stage.record==0 IS EMERGENCY??
 
         if self._stage._record > 0:
@@ -351,7 +350,6 @@ class omni_listener():
         _int_dy = int(dy)
 
         self.CHECK_MOUSE_EMERGENCY(_int_x, _int_y)
-        self.CHECK_KEYBOARD_EMERGENCY()
 
         if self._stage._record > 0:
             self._check_keyboard_buffer()
@@ -361,5 +359,4 @@ class omni_listener():
             if _int_dy!=0:
                 act = action(state='scroll|{0}'.format(_int_dy), coords_list=[{'x': _int_x, 'y': _int_y}], stage=self._stage)
                 self._stage._append(act)
-
-            #print('Mouse: {0} | Scrolled: {1}'.format((_int_x, _int_y),(_int_dx, _int_dy)))
+            # ^ (Only add after 200 miliseconds to reduce the # of actions added?)

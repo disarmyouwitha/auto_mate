@@ -21,6 +21,7 @@ def timer(msg):
     end = time.time()
     print('%s: %.02fms'%(msg, (end-start)*1000))
 
+
 # [-]: Browser mode will open browser window for user at specified x,y and width,height so that tests can be made more consistent across computers
 # [-]: OSX/Windows mode will attempt to flip ['minimize', 'restore', 'close'] x,y (within 5px of ^browser._close_x,browser._close_y) from mac to windows (or other)
 # [-]: ^(Will need to record if sequence was saved on OSX/Windows,/w what modes?)(basically wrap JSON in header array /w file_name, operating_system, etc)
@@ -62,7 +63,7 @@ if __name__ == "__main__":
     # [Set the stage, let the actors play]:
     #stage = stage_manager.stage_manager(_file_name)
     if _view != 'gui':
-        stage = stage_manager.stage_manager(_file_name, save_npz=True)
+        stage = stage_manager.stage_manager(_file_name, save_npz=False)
         if 'record' in _mode:
             stage.RECORD()
         if 'replay' in _mode:

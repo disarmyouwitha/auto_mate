@@ -185,6 +185,7 @@ class action:
                 stage._omni.CLICK(which_click='drag-click', type_click='press')
                 pyautogui.moveTo(_stop_x, _stop_y, duration=1)
                 stage._omni.CLICK(which_click='drag-click', type_click='release')
+                time.sleep(.25) # small delay after selecting
 
         # [Slight delay between actions]:
         time.sleep(.25)

@@ -114,8 +114,9 @@ class MainFrame(tk.Frame):
             # [Recording loop]:
             print('[Mouse/Keyboard listening! Press CTRL to stop recording]')
             while self._record > 0:
-                # print(self._record )
-                time.sleep(1)  # pass (?)
+                time.sleep(1)
+                #time.sleep(.5)
+                #pass (?)
 
 
         self.after(0, self.set_label_text, ' not running')
