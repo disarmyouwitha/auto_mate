@@ -11,11 +11,13 @@ class stage_manager:
     _sp = None
     _omni = None
     _record = None
+    _save_npz = None
     _file_name = None
     _action_items = None
 
-    def __init__(self, file_name):
+    def __init__(self, file_name, save_npz=False):
         self._action_items = []
+        self._save_npz = save_npz
         self._file_name = file_name
         self._sp = screen_pixel.screen_pixel()
         self._omni = omni_listener.omni_listener(self)

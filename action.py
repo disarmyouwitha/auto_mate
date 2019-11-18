@@ -1,5 +1,6 @@
+import io
 import json
-import time ##
+import time
 import numpy
 import base64
 import imageio
@@ -34,14 +35,12 @@ class action:
     _id = 0
     _state = None
     _action_id = 0
-    _ssim_score = None
     _coords_list = None
     _keyboard_buffer = None
     _control_numpy_save = None
 
     # [Initializer from scratch]:
     def __init__(self, state=None, coords_list=None, keyboard_buffer=None, JSON_STR=None, stage=None):
-        #self._stage = stage # Copy of stage for access to screen_pixel
         if JSON_STR is None:
             self._state = state
             self._action_id = action._id
@@ -58,8 +57,19 @@ class action:
             # [If BOX try to Capture screenshot from coords]: (for SSIM)
             if self._state == 'box':
                 _numpy_array = stage._sp.grab_rect(self._coords_list[0],self._coords_list[1], mod=(2 if _RETINA else 1), nemo=stage._sp._numpy)
-                self._control_numpy_save= (_numpy_array.shape, base64.b64encode(_numpy_array.tobytes()))
-                self.set_ssim(stage)
+
+                # [Compress and save numpy array of image]:
+                _bytes = io.BytesIO()
+                numpy.savez_compressed(_bytes, a=_numpy_array)
+
+                if stage._save_npz:
+                    _file_name = '{0}action{1}.npz'.format(('SEQ' if stage._file_name is None else stage._file_name[:-5]), self._action_id)
+                    with open(_file_name, 'wb') as f:
+                        f.write(_bytes.getvalue())
+                    self._control_numpy_save = _file_name
+                else:
+                    self._control_numpy_save = _bytes.getvalue()
+
             self._PRINT('Added')
         else:
             # [Should only ever be 1 key, but whatever]:
@@ -73,35 +83,22 @@ class action:
                 stage._sp.capture()
 
             if self._state == 'box':
-                self._ssim_score = JSON_DATA.get('_ssim_score')
                 self._control_numpy_save = JSON_DATA.get('_control_numpy_save')
             #self._PRINT('Loaded')
 
-    def set_ssim(self, stage=None):
-        nemo = stage._sp._numpy
-        (_control_shape, _control_64) = self._control_numpy_save
-        _control_bytes = base64.b64decode(_control_64)
-        _control_array = numpy.frombuffer(_control_bytes, dtype='uint8').reshape(_control_shape)
-        test = stage._sp.grab_rect(self._coords_list[0],self._coords_list[1], mod=(2 if _RETINA else 1), nemo=nemo)
-        self._ssim_score  = stage._sp.check_ssim(_control_array, test)
-
-        #if _DEBUGG:
-        #    imageio.imwrite('SSIM_control.png', _control_array) ## 
-        #    imageio.imwrite('SSIM_test.png', test) ## 
 
     def check_ssim(self, stage=None, thresh=.9):
-        (_control_shape, _control_64) = self._control_numpy_save
-        _control_bytes = base64.b64decode(_control_64)
-        _control_array = numpy.frombuffer(_control_bytes, dtype='uint8').reshape(_control_shape)
+        if type(self._control_numpy_save) is str:
+            _loaded = numpy.load(self._control_numpy_save)
+        else:
+            _loaded = numpy.load(io.BytesIO(self._control_numpy_save))
+        _control_array = _loaded['a']
         test = stage._sp.grab_rect(self._coords_list[0],self._coords_list[1], mod=(2 if _RETINA else 1))
         ssim_score = stage._sp.check_ssim(_control_array, test)
 
         if _DEBUGG:
             imageio.imwrite('{0}_action{1}.png'.format('CONTROL', self._action_id), _control_array) ##
             imageio.imwrite('{0}_action{1}.png'.format('TEST', self._action_id), test) ##
-
-        #print("SAVED_SSIM: {}".format(self._ssim_score))
-        # ^(Can probably compared new_ssim to saved_ssim for more accurate results)
 
         return True if (ssim_score >= thresh) else False
 
@@ -178,7 +175,4 @@ class action:
             if self._keyboard_buffer is None or self._state == 'pass':
                 print('{0} action{1}({2}): {3}'.format(act, self._action_id, self._state, _coord))
             else:
-                if self._ssim_score is not None:
-                    print('{0} action{1}({2}): {3} | {4} | {5}'.format(act, self._action_id, self._state, _coord, self._keyboard_buffer, self._ssim_score))
-                else:
-                    print('{0} action{1}({2}): {3} | {4}'.format(act, self._action_id, self._state, _coord, self._keyboard_buffer))
+                print('{0} action{1}({2}): {3} | {4}'.format(act, self._action_id, self._state, _coord, self._keyboard_buffer))

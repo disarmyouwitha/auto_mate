@@ -22,10 +22,10 @@ def timer(msg):
 
 # [https://pythonhosted.org/pynput/]
 # [https://pyautogui.readthedocs.io/en/latest/cheatsheet.html]
-# [0]: Option to save to file/filename_string instead of b64_bytes
-# [1]: IF BOX "DRAWN BACKWARDS".. USER WAS HIGHLIGHTING TEXT FOR COPY/PASTE (don't capture/try to SSIM)
-# [2]: MIRROR actions across screen / can set up same page on left/right screen, record on left, and replay on right.
-# [3]: Ability to capture Replay of actions (going through form) BUT rather than using captured keystrokes, pass in data for replay
+# [1]: BETTER _PRINT
+# [2]: IF BOX "DRAWN BACKWARDS".. USER WAS HIGHLIGHTING TEXT FOR COPY/PASTE (don't capture/try to SSIM)
+# [3]: MIRROR actions across screen / can set up same page on left/right screen, record on left, and replay on right.
+# [4]: Ability to capture Replay of actions (going through form) BUT rather than using captured keystrokes, pass in data for replay
 if __name__ == "__main__":
     # [Check command line arguments for mode]:
     try:
@@ -44,7 +44,8 @@ if __name__ == "__main__":
         _file_name = None
 
     # [Set the stage, let the actors play]:
-    stage = stage_manager.stage_manager(_file_name)
+    #stage = stage_manager.stage_manager(_file_name)
+    stage = stage_manager.stage_manager(_file_name, save_npz=True)
 
     if 'record' in _mode:
         stage.RECORD()
