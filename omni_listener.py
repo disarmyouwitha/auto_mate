@@ -99,6 +99,13 @@ class omni_listener():
 
                 self._keyboard_buffer+=key.char
                 self._typed_last = time.time()
+
+                # [If _held_keys treat as char in sequence]:
+                _held_keys = self._held_keys()
+                _held_cnt = len(_held_keys)
+                if _held_cnt >= 1:
+                    self._check_keyboard_buffer(interrupt=True)
+
             except AttributeError:
                 # [Pass-through on other special characters]: 
                 #print('special key {0} pressed'.format(key))
@@ -109,7 +116,7 @@ class omni_listener():
                     if len(self._keyboard_buffer) > 0:
                         self._keyboard_buffer = self._keyboard_buffer[:-1]
                     else: # [Otherwise add as special character for replay?]:
-                        act = action(state='key', coords_list={'x': self._last_int_x, 'y': self._last_int_y}, keyboard_buffer=key, stage=self._stage)
+                        act = action(state='key', coords_list={'x': self._last_int_x, 'y': self._last_int_y}, keyboard_buffer='{0}|1'.format(key), stage=self._stage)
                         self._stage._append(act)
 
                 # [Add space for spacebar xD]:
