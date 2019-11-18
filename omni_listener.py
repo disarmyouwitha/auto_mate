@@ -294,6 +294,7 @@ class omni_listener():
         _int_y = int(y)
 
         self.CHECK_MOUSE_EMERGENCY(_int_x, _int_y)
+        self.CHECK_KEYBOARD_EMERGENCY()
 
         if self._stage._record > 0:
             self._check_keyboard_buffer()

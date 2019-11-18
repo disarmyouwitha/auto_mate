@@ -1,5 +1,5 @@
 import json
-import time
+import time ##
 import numpy
 import base64
 import imageio
@@ -107,7 +107,6 @@ class action:
 
     def RUN(self, stage):
         self._PRINT('Replay')
-        _SKIP_SLEEP = False
 
         # [CLICK| Click Position]: 
         if self._state == 'click':
@@ -134,10 +133,6 @@ class action:
             elif _pressed==3: # tap
                 stage._omni.PRESS(_key)
                 stage._omni.RELEASE(_key)
-                _SKIP_SLEEP = True
-
-            if _SKIP_SLEEP:
-                time.sleep(.1)
 
         # [PASS| Enter password]:
         if self._state == 'pass':
@@ -169,10 +164,6 @@ class action:
                 pyautogui.moveTo((_start_x+_diff_x),(_start_y+_diff_y), duration=1)
                 pyautogui.moveTo(_start_x,(_start_y+_diff_y), duration=1)
                 pyautogui.moveTo(_start_x,_start_y, duration=1)
-
-        # [1sec pause]:
-        if _SKIP_SLEEP:
-            time.sleep(1)
 
     # [Serializer]:
     def _JSON(self):

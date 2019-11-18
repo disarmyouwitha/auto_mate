@@ -1,3 +1,4 @@
+import os
 import sys
 import time
 import json
@@ -104,15 +105,12 @@ class stage_manager:
             _again-=1
             if _again==0:
                 _again = input('[Do you wish to Replay again?] (N for no, # for loop): ')
-                _again_bytes = bytes(_again, "utf-8")
 
-                # [NEED TO REMOVE \t TABS TOO]:
-                # [If ESC present.. remove it!]:
-                if b'\x1b' in _again_bytes:
-                    _again_bytes_array = bytearray(_again_bytes)
-                    del _again_bytes_array[0]
-                    _again = _again_bytes_array.decode('utf-8')
+                # [Remove tabs and escapes from command input]:
+                _again = _again.replace('\x1b', '')
+                _again = _again.replace('\t', '')
 
+                # [alpha to int]:
                 if _again.isalpha() or _again=='':
                     _again = 0 if (_again.lower() == 'n' or _again.lower() == 'no') else 1
                 else:
