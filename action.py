@@ -108,13 +108,12 @@ class action:
         self._PRINT('Replay')
 
         # [CLICK| Click Position]: 
-        if self._state == 'click':
+        if 'click' in self._state:
+            (_which_click, _num_clicks) = self._state.split('|')
             _x = self._coords_list[0].get('x')
             _y = self._coords_list[0].get('y')
             pyautogui.moveTo(_x, _y, duration=1)
-            stage._omni.CLICK('left', 1)
-            # ^(Need to check click/double-click for replay)
-            # ^(Need to check left click vs right click)
+            stage._omni.CLICK(which_click=_which_click, num_clicks=int(_num_clicks))
 
         # [KEYBOARD| replay typing]:
         if self._state == 'keyboard':
@@ -143,10 +142,13 @@ class action:
 
         # [BOX| CHECK SSIM]:
         if self._state == 'box':
+            #if _left_to_right:
             if self.check_ssim(stage=stage, thresh=1):
                 print('[passed]')
             else:
                 print('[failed]')
+            #else:
+                #stage._omni.CLICK(which_click='drag-click', hold=1)
 
             # [Draw box coords specified]:
             _draw_box = False
@@ -155,6 +157,8 @@ class action:
                 _start_y = self._coords_list[0].get('y')
                 _stop_x = self._coords_list[1].get('x')
                 _stop_y = self._coords_list[1].get('y')
+
+                #if _left_to_right:
                 _diff_x = (_stop_x - _start_x)
                 _diff_y = (_stop_y - _start_y)
 

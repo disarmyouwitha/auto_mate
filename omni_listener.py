@@ -7,9 +7,6 @@ import pynput.keyboard as kb
 from pynput.mouse import Button, Controller
 from pynput.keyboard import Key, Controller
 
-# [HOLD keys are great mechanic for catching key combos for special actions within the program]:
-# [Need to capture/create action for key release]..
-# ^(Seperate press/release actions)
 class omni_listener():
     # [CONTROLLERS]:
     _stage = None
@@ -17,11 +14,12 @@ class omni_listener():
     _ms_ctrl = None
 
     # [MOUSE GLOBALS]:
+    _last_click = 0
     _last_int_x = None
     _last_int_y = None
 
     # [KEYBOARD GLOBALS]:
-    _typed_last = 0
+    _last_typed = 0
     _hold_ESC = False
     _hold_ALT = False
     _hold_TAB = False
@@ -52,21 +50,25 @@ class omni_listener():
             print('[KEYBOARD_PANIC_EXIT]')
             os._exit(1)
 
-    def CLICK(self, which_click='left', num_clicks=1):
-        if which_click == 'left':
-            self._ms_ctrl.click(ms.Button.left, num_clicks)
+    def CLICK(self, which_click='left', num_clicks=1, hold=0):
+        if hold==0:
+            if which_click == 'right-click':
+                self._ms_ctrl.click(ms.Button.right, num_clicks)
+            else:
+                self._ms_ctrl.click(ms.Button.left, num_clicks)
         else:
-            self._ms_ctrl.click(ms.Button.right, num_clicks)
+            if which_click == 'right-click':
+                self._ms_ctrl.press(ms.Button.right)
+            else:
+                self._ms_ctrl.press(ms.Button.left)
 
     def PRESS(self, key):
         self._kb_ctrl.press(key)
         self._handle_special_press(key)
-        #print('PRESSED: {0}'.format(key))
 
     def RELEASE(self, key):
         self._kb_ctrl.release(key)
         self._handle_special_release(key)
-        #print('RELEASED: {0}'.format(key))
 
     # [Takes action._keyboard_buffer with delimited Key values]: (Key.tab|Key.cmd|3)
     def _str_to_key(self, _str):
@@ -94,11 +96,8 @@ class omni_listener():
 
             try:
                 _key = key.char
-                if self._typed_last == 0:
-                    self._typed_last = time.time()
-
                 self._keyboard_buffer+=key.char
-                self._typed_last = time.time()
+                self._last_typed = time.time()
 
                 # [If _held_keys treat as char in sequence]:
                 _held_keys = self._held_keys()
@@ -251,14 +250,14 @@ class omni_listener():
                 self._stage._append(act)
 
     def _check_keyboard_buffer(self, interrupt=False):
-        if interrupt==True or ((self._typed_last > 0) and (time.time() - self._typed_last) >= 2):
+        if interrupt==True or ((self._last_typed > 0) and (time.time() - self._last_typed) >= 2):
             if self._keyboard_buffer != '':
                 # [Action for Keyboard takes x,y of last click and keyboard_buffer]:
                 act = action(state='keyboard', coords_list={'x': self._last_int_x, 'y': self._last_int_y}, keyboard_buffer=self._keyboard_buffer, stage=self._stage)
                 self._stage._append(act)
 
             self._keyboard_buffer=''
-            self._typed_last=0
+            self._last_typed=0
 
     def on_click(self, x, y, button, pressed):
         _int_x = int(x)
@@ -281,6 +280,7 @@ class omni_listener():
 
                 # [SHIFT held while clicking | Enter Password]:
                 if self._hold_SHIFT:
+                    self._stage._pop()
                     self._PASS_input = True
                     _pass = input('Enter password here: ')
                     act = action(state='pass', coords_list={'x': self._last_int_x, 'y': self._last_int_y}, keyboard_buffer=_pass, stage=self._stage)
@@ -291,11 +291,41 @@ class omni_listener():
 
                 # [SAME = CLICK | DIFF = BOX]:
                 if abs(_int_x-self._last_int_x) < 5 and abs(_int_y-self._last_int_y) < 5:
-                    act = action(state='click', coords_list=[{'x': _int_x, 'y': _int_y}], stage=self._stage)
-                    self._stage._append(act)
+                    # [Keep track of last click / tell difference between single/double click]:
+                    if self._last_click == 0:
+                        self._last_click = time.time()
+                        _click_cnt = 1
+                    else:
+                        if (time.time() - self._last_click) >= 1:
+                            _click_cnt = 1
+                        else:
+                            _click_cnt = 2
+                        self._last_click = time.time()
+
+                    # [Determine left/right click]:
+                    if button==Button.left:
+                        _which_click = 'left-click|{0}'.format(_click_cnt)
+                    elif button==Button.right:
+                        _which_click = 'right-click|{0}'.format(_click_cnt)
+                    else:
+                        _which_click = 'other-click|{0}'.format(_click_cnt)
+
+                    if _click_cnt ==1:
+                        act = action(state=_which_click, coords_list=[{'x': _int_x, 'y': _int_y}], stage=self._stage)
+                        self._stage._append(act)
+                    else:
+                        # [If double-click was made, increment previous single-click]:
+                        _prev_act = self._stage._peek()
+                        if '-click|1' in _prev_act._state:
+                            _state_split = _prev_act._state.split('-')
+                            _prev_act._state = '{0}-click|2'.format(_state_split[0])
                 else:
                     act = action(state='box', coords_list=[{'x': self._last_int_x, 'y': self._last_int_y}, {'x': _int_x, 'y': _int_y}], stage=self._stage)
                     self._stage._append(act)
+                #(CHECK IF _int_x > _last_int_x (drawing right to left))
+                #   IF SO.. USER IS TRYING TO HIGHLIGHT TEXT, NOT SSIM, SO..
+                #   do click -> hold -> release
+                #   ^ Capture left / right / double click
 
     def on_move(self, x, y):
         _int_x = int(x)

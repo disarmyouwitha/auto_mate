@@ -27,6 +27,14 @@ class stage_manager:
 
     def _append(self, action):
         self._action_items.append(action)
+    
+    def _pop(self):
+        if len(self._action_items) > 0:
+            return self._action_items.pop()
+
+    def _peek(self):
+        if len(self._action_items) > 0:
+            return self._action_items[len(self._action_items)-1]
 
     def save_sequence(self, file_name=None):
         _json_seq = {}

@@ -22,8 +22,9 @@ def timer(msg):
 
 # [https://pythonhosted.org/pynput/]
 # [https://pyautogui.readthedocs.io/en/latest/cheatsheet.html]
-# [1]: BETTER _PRINT
-# [2]: IF BOX "DRAWN BACKWARDS".. USER WAS HIGHLIGHTING TEXT FOR COPY/PASTE (don't capture/try to SSIM)
+# [0]: Capture left / right / double click
+# [1]: IF BOX "DRAWN BACKWARDS".. USER WAS HIGHLIGHTING TEXT FOR COPY/PASTE (don't capture/try to SSIM)
+# [2]: BETTER _PRINT (?)
 # [3]: MIRROR actions across screen / can set up same page on left/right screen, record on left, and replay on right.
 # [4]: Ability to capture Replay of actions (going through form) BUT rather than using captured keystrokes, pass in data for replay
 if __name__ == "__main__":
