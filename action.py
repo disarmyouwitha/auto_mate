@@ -113,7 +113,7 @@ class action:
             _x = self._coords_list[0].get('x')
             _y = self._coords_list[0].get('y')
             pyautogui.moveTo(_x, _y, duration=1)
-            stage._omni.CLICK(which_click=_which_click, num_clicks=int(_num_clicks))
+            stage._omni.CLICK(which_click=_which_click, num_clicks=int(_num_clicks), type_click='click')
 
         # [KEYBOARD| replay typing]:
         if self._state == 'keyboard':
@@ -140,34 +140,39 @@ class action:
             pyautogui.click(x=_x, y=_y, button='left', clicks=1)
             pyautogui.typewrite(self._keyboard_buffer, interval=.1)
 
-        # [BOX| CHECK SSIM]:
-        if self._state == 'box':
-            #if _left_to_right:
-            if self.check_ssim(stage=stage, thresh=1):
-                print('[passed]')
-            else:
-                print('[failed]')
-            #else:
-                #stage._omni.CLICK(which_click='drag-click', hold=1)
+        if 'box' in self._state:
+            _start_x = self._coords_list[0].get('x')
+            _start_y = self._coords_list[0].get('y')
+            _stop_x = self._coords_list[1].get('x')
+            _stop_y = self._coords_list[1].get('y')
 
-            # [Draw box coords specified]:
-            _draw_box = False
-            if _draw_box:
-                _start_x = self._coords_list[0].get('x')
-                _start_y = self._coords_list[0].get('y')
-                _stop_x = self._coords_list[1].get('x')
-                _stop_y = self._coords_list[1].get('y')
+            # [BOX| CHECK SSIM]:
+            if self._state == 'ssim-box':
+                _draw_box = False
+                if _draw_box:
+                    # [Draw box coords specified]:
+                    _diff_x = (_stop_x - _start_x)
+                    _diff_y = (_stop_y - _start_y)
+                    pyautogui.moveTo(_start_x, _start_y, duration=1)
+                    pyautogui.moveTo((_start_x+_diff_x),_start_y, duration=1)
+                    pyautogui.moveTo((_start_x+_diff_x),(_start_y+_diff_y), duration=1)
+                    pyautogui.moveTo(_start_x,(_start_y+_diff_y), duration=1)
+                    pyautogui.moveTo(_start_x,_start_y, duration=1)
 
-                #if _left_to_right:
-                _diff_x = (_stop_x - _start_x)
-                _diff_y = (_stop_y - _start_y)
+                # [Get SSIM of box]:
+                if self.check_ssim(stage=stage, thresh=1):
+                    print('[passed]')
+                else:
+                    print('[failed]')
 
+            #[BOX| DRAG BOX]:
+            elif self._state == 'drag-box':
                 pyautogui.moveTo(_start_x, _start_y, duration=1)
-                pyautogui.moveTo((_start_x+_diff_x),_start_y, duration=1)
-                pyautogui.moveTo((_start_x+_diff_x),(_start_y+_diff_y), duration=1)
-                pyautogui.moveTo(_start_x,(_start_y+_diff_y), duration=1)
-                pyautogui.moveTo(_start_x,_start_y, duration=1)
+                stage._omni.CLICK(which_click='drag-click', type_click='press')
+                pyautogui.moveTo(_stop_x, _stop_y, duration=1)
+                stage._omni.CLICK(which_click='drag-click', type_click='release')
 
+        # [Slight delay between actions]:
         time.sleep(.25)
 
     # [Serializer]: (helper)

@@ -50,17 +50,22 @@ class omni_listener():
             print('[KEYBOARD_PANIC_EXIT]')
             os._exit(1)
 
-    def CLICK(self, which_click='left', num_clicks=1, hold=0):
-        if hold==0:
+    def CLICK(self, which_click='left', num_clicks=1, type_click='click'):
+        if type_click=='click':
             if which_click == 'right-click':
                 self._ms_ctrl.click(ms.Button.right, num_clicks)
             else:
                 self._ms_ctrl.click(ms.Button.left, num_clicks)
-        else:
+        elif type_click=='press':
             if which_click == 'right-click':
                 self._ms_ctrl.press(ms.Button.right)
             else:
                 self._ms_ctrl.press(ms.Button.left)
+        elif type_click=='release':
+            if which_click == 'right-click':
+                self._ms_ctrl.release(ms.Button.right)
+            else:
+                self._ms_ctrl.release(ms.Button.left)
 
     def PRESS(self, key):
         self._kb_ctrl.press(key)
@@ -320,12 +325,12 @@ class omni_listener():
                             _state_split = _prev_act._state.split('-')
                             _prev_act._state = '{0}-click|2'.format(_state_split[0])
                 else:
-                    act = action(state='box', coords_list=[{'x': self._last_int_x, 'y': self._last_int_y}, {'x': _int_x, 'y': _int_y}], stage=self._stage)
+                    if _int_x > self._last_int_x:
+                        _which_box = 'ssim-box'
+                    else:
+                        _which_box = 'drag-box'
+                    act = action(state=_which_box, coords_list=[{'x': self._last_int_x, 'y': self._last_int_y}, {'x': _int_x, 'y': _int_y}], stage=self._stage)
                     self._stage._append(act)
-                #(CHECK IF _int_x > _last_int_x (drawing right to left))
-                #   IF SO.. USER IS TRYING TO HIGHLIGHT TEXT, NOT SSIM, SO..
-                #   do click -> hold -> release
-                #   ^ Capture left / right / double click
 
     def on_move(self, x, y):
         _int_x = int(x)
