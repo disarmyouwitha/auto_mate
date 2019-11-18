@@ -22,10 +22,9 @@ def timer(msg):
 
 # [https://pythonhosted.org/pynput/]
 # [https://pyautogui.readthedocs.io/en/latest/cheatsheet.html]
-# [0]: MSS > check # of screens > if only 1 (and Darwin) > use _RETINA = True
-# [1]: BETTER _PRINT (?) key: don't show X,Y (None)
-# [2]: MIRROR actions across screen / can set up same page on left/right screen, record on left, and replay on right.
-# [3]: Ability to capture Replay of actions (going through form) BUT rather than using captured keystrokes, pass in data for replay
+# [0]: BETTER _PRINT (?) key: don't show X,Y (None)
+# [1]: MIRROR actions across screen / can set up same page on left/right screen, record on left, and replay on right.
+# [2]: Ability to capture Replay of actions (going through form) BUT rather than using captured keystrokes, pass in data for replay
 if __name__ == "__main__":
     # [Check command line arguments for mode]:
     try:
@@ -45,7 +44,6 @@ if __name__ == "__main__":
 
     # [Set the stage, let the actors play]:
     stage = stage_manager.stage_manager(_file_name, save_npz=False)
-    #stage = stage_manager.stage_manager(_file_name, save_npz=True)
 
     if 'record' in _mode:
         stage.RECORD()

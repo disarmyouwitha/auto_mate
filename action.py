@@ -1,4 +1,5 @@
 import io
+import os ##
 import json
 import time
 import numpy
@@ -7,9 +8,8 @@ import imageio
 import pyautogui
 import jsonpickle
 
-_RETINA = True
+_DEBUGG = True
 _MIRROR = False
-_DEBUGG = False
 pyautogui.PAUSE = 0
 pyautogui.FAILSAFE = True
 
@@ -55,7 +55,8 @@ class action:
             action._id+=1
 
             # [If BOX try to Capture screenshot from coords]: (for SSIM)
-            if self._state == 'box':
+            if 'box' in self._state:
+                _RETINA = stage._sp._check_screen()
                 _numpy_array = stage._sp.grab_rect(self._coords_list[0],self._coords_list[1], mod=(2 if _RETINA else 1), nemo=stage._sp._numpy)
 
                 # [Compress and save numpy array of image]:
@@ -81,7 +82,7 @@ class action:
                 self._keyboard_buffer = JSON_DATA.get('_keyboard_buffer')
                 stage._sp.capture()
 
-            if self._state == 'box':
+            if 'box' in self._state:
                 if stage._save_npz:
                     self._control_numpy_save = '{0}_action{1}.npz'.format(('SEQ' if stage._file_name is None else stage._file_name[:-5]), self._action_id)
                 else:
@@ -90,11 +91,16 @@ class action:
 
 
     def check_ssim(self, stage=None, thresh=.9):
+        if self._control_numpy_save is None:
+            print('[Issue saving, no _control_numpy_save for SSIM!]')
+            os._exit(1)
         if type(self._control_numpy_save) is str:
             _loaded = numpy.load(self._control_numpy_save)
         else:
             _loaded = numpy.load(io.BytesIO(self._control_numpy_save))
         _control_array = _loaded['a']
+
+        _RETINA = stage._sp._check_screen()
         test = stage._sp.grab_rect(self._coords_list[0],self._coords_list[1], mod=(2 if _RETINA else 1))
         ssim_score = stage._sp.check_ssim(_control_array, test)
 

@@ -1,4 +1,5 @@
 import os
+import mss
 import sys
 import cv2
 import time
@@ -6,11 +7,9 @@ import numpy
 import imageio
 import skimage.metrics
 
-# [Import Quartz for OSX, else use MSS]: (for screen_pixel.capture())
+# [Import Quartz for OSX]: (for screen_pixel.capture())
 if sys.platform == 'darwin':
     import Quartz.CoreGraphics as CG
-else:
-    import mss
 
 class screen_pixel(object):
     _data = None
@@ -59,6 +58,17 @@ class screen_pixel(object):
             _numpy_rgb = cv2.cvtColor(_numpy_bgr, cv2.COLOR_BGR2RGB)
             self._numpy = _numpy_rgb
             #imageio.imwrite('screen_mss.png', self._numpy)
+    
+    def _check_screen(self):
+        with mss.mss() as sct:
+            _num_mon = len(sct.monitors)
+
+        _RETINA = False
+        if sys.platform == 'darwin':
+            if _num_mon <= 2: #0:All,1:First,2:NOT RETINA
+                _RETINA = True
+
+        return _RETINA
 
     def resize_image(self, nemo, scale_percent=50):
         width = int(nemo.shape[1] * scale_percent / 100)
