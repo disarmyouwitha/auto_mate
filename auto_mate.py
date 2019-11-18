@@ -44,8 +44,8 @@ if __name__ == "__main__":
         _file_name = None
 
     # [Set the stage, let the actors play]:
-    #stage = stage_manager.stage_manager(_file_name)
-    stage = stage_manager.stage_manager(_file_name, save_npz=True)
+    stage = stage_manager.stage_manager(_file_name, save_npz=False)
+    #stage = stage_manager.stage_manager(_file_name, save_npz=True)
 
     if 'record' in _mode:
         stage.RECORD()

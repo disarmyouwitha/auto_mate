@@ -63,7 +63,7 @@ class action:
                 numpy.savez_compressed(_bytes, a=_numpy_array)
 
                 if stage._save_npz:
-                    _file_name = '{0}action{1}.npz'.format(('SEQ' if stage._file_name is None else stage._file_name[:-5]), self._action_id)
+                    _file_name = '{0}_action{1}.npz'.format(('SEQ' if stage._file_name is None else stage._file_name[:-5]), self._action_id)
                     with open(_file_name, 'wb') as f:
                         f.write(_bytes.getvalue())
                     self._control_numpy_save = _file_name
