@@ -8,7 +8,7 @@ import imageio
 import pyautogui
 import jsonpickle
 
-_DEBUGG = True
+_DEBUGG = False
 _MIRROR = False
 pyautogui.PAUSE = 0
 pyautogui.FAILSAFE = True
@@ -71,7 +71,7 @@ class action:
                 else:
                     self._control_numpy_save = _bytes.getvalue()
 
-            self._PRINT('Added')
+            self._PRINT(verb='Added')
         else:
             # [Should only ever be 1 key, but whatever]:
             for key in JSON_STR.keys():
@@ -87,7 +87,7 @@ class action:
                     self._control_numpy_save = '{0}_action{1}.npz'.format(('SEQ' if stage._file_name is None else stage._file_name[:-5]), self._action_id)
                 else:
                     self._control_numpy_save = jsonpickle.decode(JSON_DATA.get('_control_numpy_save'))
-            #self._PRINT('Loaded')
+            #self._PRINT(verb='Loaded')
 
 
     def check_ssim(self, stage=None, thresh=.9):
@@ -108,10 +108,15 @@ class action:
             imageio.imwrite('{0}_action{1}.png'.format('CONTROL', self._action_id), _control_array) ##
             imageio.imwrite('{0}_action{1}.png'.format('TEST', self._action_id), test) ##
 
+        if ssim_score >= thresh:
+            print('[passed]: {0}'.format(ssim_score))
+        else:
+            print('[failed]: {0}'.format(ssim_score))
+
         return True if (ssim_score >= thresh) else False
 
     def RUN(self, stage):
-        self._PRINT('Replay')
+        self._PRINT(verb='Replay')
 
         # [CLICK| Click Position]: 
         if 'click' in self._state:
@@ -141,9 +146,9 @@ class action:
         # [PASS| Enter password]:
         if self._state == 'pass':
             # [Move mouse && click on _x, _y]: (?)
-            _x = self._coords_list[0].get('x')
-            _y = self._coords_list[0].get('y')
-            pyautogui.click(x=_x, y=_y, button='left', clicks=1)
+            #_x = self._coords_list[0].get('x')
+            #_y = self._coords_list[0].get('y')
+            #pyautogui.click(x=_x, y=_y, button='left', clicks=1)
             pyautogui.typewrite(self._keyboard_buffer, interval=.1)
 
         if 'box' in self._state:
@@ -166,10 +171,7 @@ class action:
                     pyautogui.moveTo(_start_x,_start_y, duration=1)
 
                 # [Get SSIM of box]:
-                if self.check_ssim(stage=stage, thresh=1):
-                    print('[passed]')
-                else:
-                    print('[failed]')
+                _SSIM = self.check_ssim(stage=stage, thresh=1)
 
             #[BOX| DRAG BOX]:
             elif self._state == 'drag-box':
@@ -195,9 +197,16 @@ class action:
         return {'action{0}'.format(self._action_id): _json_dump}
 
     # [Pretty Print actions]:
-    def _PRINT(self, act):
-        for _coord in self._coords_list:
-            if self._keyboard_buffer is None or self._state == 'pass':
-                print('{0} action{1}({2}): {3}'.format(act, self._action_id, self._state, _coord))
-            else:
-                print('{0} action{1}({2}): {3} | {4}'.format(act, self._action_id, self._state, _coord, self._keyboard_buffer))
+    def _PRINT(self, verb):
+        if 'click' in self._state:
+            print('{0} action{1}({2}): {3}'.format(verb, self._action_id, self._state, self._coords_list[0]))
+
+        if 'key' in self._state:
+            print('{0} action{1}({2}): {3}'.format(verb, self._action_id, self._state, self._keyboard_buffer))
+
+        if 'pass' in self._state:
+            print('{0} action{1}({2})'.format(verb, self._action_id, self._state))
+
+        if 'box' in self._state:
+            for _coord in self._coords_list:
+                print('{0} action{1}({2}): {3}'.format(verb, self._action_id, self._state, _coord))

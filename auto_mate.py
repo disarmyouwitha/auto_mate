@@ -20,11 +20,8 @@ def timer(msg):
     print('%s: %.02fms'%(msg, (end-start)*1000))
 
 
-# [https://pythonhosted.org/pynput/]
-# [https://pyautogui.readthedocs.io/en/latest/cheatsheet.html]
-# [0]: BETTER _PRINT (?) key: don't show X,Y (None)
-# [1]: MIRROR actions across screen / can set up same page on left/right screen, record on left, and replay on right.
-# [2]: Ability to capture Replay of actions (going through form) BUT rather than using captured keystrokes, pass in data for replay
+# [0]: MIRROR actions across screen / can set up same page on left/right screen, record on left, and replay on right.
+# [1]: Ability to capture Replay of actions (going through form) BUT rather than using captured keystrokes, pass in data for replay
 if __name__ == "__main__":
     # [Check command line arguments for mode]:
     try:

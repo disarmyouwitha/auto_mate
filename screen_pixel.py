@@ -106,10 +106,7 @@ class screen_pixel(object):
         # [Convert images to grayscale]:
         gray_control = cv2.cvtColor(control, cv2.COLOR_BGR2GRAY)
         gray_test = cv2.cvtColor(test, cv2.COLOR_BGR2GRAY)
-
-        # [Do SSIM]:
         (score, diff) = skimage.metrics.structural_similarity(gray_control, gray_test, full=True)
 
-        print("SSIM: {}".format(score))
+        #print("SSIM: {}".format(score))
         return score
-        #return True if (score > thresh) else False
