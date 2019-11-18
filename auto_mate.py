@@ -19,9 +19,13 @@ def timer(msg):
     end = time.time()
     print('%s: %.02fms'%(msg, (end-start)*1000))
 
-
+# [-]: Browser mode will open browser window for user at specified x,y and width,height so that tests can be made more consistent across computers
+# [-]: OSX/Windows mode will attempt to flip ['minimize', 'restore', 'close'] x,y (within 5px of ^browser._close_x,browser._close_y) from mac to windows (or other)
+# [-]: ^(Will need to record if sequence was saved on OSX/Windows,/w what modes?)(basically wrap JSON in header array /w file_name, operating_system, etc)
 # [0]: MIRROR actions across screen / can set up same page on left/right screen, record on left, and replay on right.
 # [1]: Ability to capture Replay of actions (going through form) BUT rather than using captured keystrokes, pass in data for replay
+# [2]: Tweening / Easing for neater replay?
+#    > https://pyautogui.readthedocs.io/en/latest/mouse.html#tween-easing-functions
 if __name__ == "__main__":
     # [Check command line arguments for mode]:
     try:

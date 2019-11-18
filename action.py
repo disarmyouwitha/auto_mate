@@ -8,7 +8,7 @@ import imageio
 import pyautogui
 import jsonpickle
 
-_DEBUGG = False
+_DEBUGG = True
 _MIRROR = False
 pyautogui.PAUSE = 0
 pyautogui.FAILSAFE = True
@@ -39,7 +39,6 @@ class action:
     _keyboard_buffer = None
     _control_numpy_save = None
 
-    # [Initializer from scratch]:
     def __init__(self, state=None, coords_list=None, keyboard_buffer=None, JSON_STR=None, stage=None):
         if JSON_STR is None:
             self._state = state
