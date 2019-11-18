@@ -75,7 +75,6 @@ class action:
             # [Should only ever be 1 key, but whatever]:
             for key in JSON_STR.keys():
                 JSON_DATA = json.loads(JSON_STR[key])
-                JSON_DATA = jsonpickle.decode(JSON_DATA)
                 self._state = JSON_DATA.get('_state')
                 self._action_id = JSON_DATA.get('_action_id')
                 self._coords_list = JSON_DATA.get('_coords_list')
@@ -83,7 +82,10 @@ class action:
                 stage._sp.capture()
 
             if self._state == 'box':
-                self._control_numpy_save = JSON_DATA.get('_control_numpy_save')
+                if stage._save_npz:
+                    self._control_numpy_save = '{0}_action{1}.npz'.format(('SEQ' if stage._file_name is None else stage._file_name[:-5]), self._action_id)
+                else:
+                    self._control_numpy_save = jsonpickle.decode(JSON_DATA.get('_control_numpy_save'))
             #self._PRINT('Loaded')
 
 
@@ -164,9 +166,17 @@ class action:
 
         time.sleep(.25)
 
+    # [Serializer]: (helper)
+    # [jsonpickle objects with no __dict__]:
+    def _serialize(self, obj):
+        try:
+            return obj.__dict__
+        except:
+            return jsonpickle.encode(obj)
+
     # [Serializer]:
     def _JSON(self):
-        _json_dump = json.dumps(self, default=lambda o: jsonpickle.encode(o.__dict__))
+        _json_dump = json.dumps(self, default=self._serialize)
         return {'action{0}'.format(self._action_id): _json_dump}
 
     # [Pretty Print actions]:
