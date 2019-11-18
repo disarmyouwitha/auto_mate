@@ -22,7 +22,6 @@ def timer(msg):
 
 # [https://pythonhosted.org/pynput/]
 # [https://pyautogui.readthedocs.io/en/latest/cheatsheet.html]
-# [0]: Key combos such as CMD+C copy/paste
 # [0]: Option to save to file/filename_string instead of b64_bytes
 # [1]: IF BOX "DRAWN BACKWARDS".. USER WAS HIGHLIGHTING TEXT FOR COPY/PASTE (don't capture/try to SSIM)
 # [2]: MIRROR actions across screen / can set up same page on left/right screen, record on left, and replay on right.

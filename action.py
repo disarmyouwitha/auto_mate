@@ -75,7 +75,7 @@ class action:
             if self._state == 'box':
                 self._ssim_score = JSON_DATA.get('_ssim_score')
                 self._control_numpy_save = JSON_DATA.get('_control_numpy_save')
-            self._PRINT('Loaded')
+            #self._PRINT('Loaded')
 
     def set_ssim(self, stage=None):
         nemo = stage._sp._numpy
