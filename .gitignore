@@ -1,5 +1,7 @@
 *.npz
 *.png
 *.json
+.idea
+.idea/*
 .DS_Store
 __pycache__/
