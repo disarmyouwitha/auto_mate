@@ -8,6 +8,8 @@ automation testing tools
 
 > python3 auto_mate.py replay filename.json (replay mode)
 
+> python3 auto_mate.py gui (launch into gui mode)
+
 # [RUNNING]:
 > Once you start the program it will record mouse/keyboard actions
 

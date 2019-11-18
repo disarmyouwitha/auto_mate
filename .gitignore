@@ -3,3 +3,12 @@
 *.json
 .DS_Store
 __pycache__/
+.idea/auto_mate.iml
+.idea/encodings.xml
+.idea/misc.xml
+.idea/modules.xml
+.idea/vcs.xml
+.idea/vcs.xml
+.idea/workspace.xml
+.idea/vcs.xml
+.idea/vcs.xml
