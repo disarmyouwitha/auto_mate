@@ -160,6 +160,7 @@ class omni_listener():
 
         # [If ENTER key pressed]:
         if key == kb.Key.enter:
+            self._check_keyboard_buffer(interrupt=True)
             _pass_thru = True
 
         # [If ARROW key pressed]: (Held keys?)
@@ -216,7 +217,7 @@ class omni_listener():
 
     def on_release(self, key):
         if self._stage._record > 0:
-            self._check_keyboard_buffer(interrupt=True)
+            self._check_keyboard_buffer()
         self._handle_special_release(key)
 
     # [Special conditions on release]:

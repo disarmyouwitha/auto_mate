@@ -165,6 +165,8 @@ class action:
                 pyautogui.moveTo(_start_x,(_start_y+_diff_y), duration=1)
                 pyautogui.moveTo(_start_x,_start_y, duration=1)
 
+        time.sleep(.25)
+
     # [Serializer]:
     def _JSON(self):
         _json_dump = json.dumps(self, default=lambda o: jsonpickle.encode(o.__dict__))
