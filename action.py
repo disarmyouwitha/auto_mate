@@ -8,7 +8,7 @@ import imageio
 import pyautogui
 import jsonpickle
 
-_DEBUGG = True
+_DEBUGG = False
 _MIRROR = False
 pyautogui.PAUSE = 0
 pyautogui.FAILSAFE = True
@@ -176,8 +176,8 @@ class action:
                     pyautogui.moveTo(_start_x,(_start_y+_diff_y), duration=1)
                     pyautogui.moveTo(_start_x,_start_y, duration=1)
 
-                # [Get SSIM of box]:
-                _SSIM = self.check_ssim(stage=stage, thresh=1)
+                # [Check SSIM of box]:
+                _SSIM = self.check_ssim(stage=stage, thresh=.999)
 
             #[BOX| DRAG BOX]:
             elif self._state == 'drag-box':
