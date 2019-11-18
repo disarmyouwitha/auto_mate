@@ -34,7 +34,7 @@ class omni_listener():
         self._kb_ctrl = kb.Controller()
         self._ms_ctrl = ms.Controller()
 
-        self.mouse_listener = ms.Listener(on_click=self.on_click, on_move=self.on_move)
+        self.mouse_listener = ms.Listener(on_click=self.on_click, on_move=self.on_move, on_scroll=self.on_scroll)
         self.keyboard_listener = kb.Listener(on_press=self.on_press, on_release=self.on_release)
         # ^(non-blocking mouse/keyboard listener)
 
@@ -338,7 +338,28 @@ class omni_listener():
 
         self.CHECK_MOUSE_EMERGENCY(_int_x, _int_y)
         self.CHECK_KEYBOARD_EMERGENCY()
+        # IF ANY MOVEMENT DURING self._stage.record==0 IS EMERGENCY??
 
         if self._stage._record > 0:
             self._check_keyboard_buffer()
             # ^(Flush keyboard buffer)
+
+    def on_scroll(self, x, y, dx, dy):
+        _int_x = int(x)
+        _int_y = int(y)
+        _int_dx = int(dx)
+        _int_dy = int(dy)
+
+        self.CHECK_MOUSE_EMERGENCY(_int_x, _int_y)
+        self.CHECK_KEYBOARD_EMERGENCY()
+
+        if self._stage._record > 0:
+            self._check_keyboard_buffer()
+            # ^(Flush keyboard buffer)
+
+            # [Add scroll actions]:
+            if _int_dy!=0:
+                act = action(state='scroll|{0}'.format(_int_dy), coords_list=[{'x': _int_x, 'y': _int_y}], stage=self._stage)
+                self._stage._append(act)
+
+            #print('Mouse: {0} | Scrolled: {1}'.format((_int_x, _int_y),(_int_dx, _int_dy)))

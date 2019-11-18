@@ -126,6 +126,13 @@ class action:
             pyautogui.moveTo(_x, _y, duration=1)
             stage._omni.CLICK(which_click=_which_click, num_clicks=int(_num_clicks), type_click='click')
 
+        # [SCROLL| Move to x,y and Scroll]:
+        if 'scroll' in self._state:
+            (_scroll, _num_clicks) = self._state.split('|')
+            _x = self._coords_list[0].get('x')
+            _y = self._coords_list[0].get('y')
+            pyautogui.scroll(_num_clicks, x=_x, y=_y)
+
         # [KEYBOARD| replay typing]:
         if self._state == 'keyboard':
             pyautogui.typewrite(self._keyboard_buffer, interval=.1)
@@ -200,13 +207,12 @@ class action:
     def _PRINT(self, verb):
         if 'click' in self._state:
             print('{0} action{1}({2}): {3}'.format(verb, self._action_id, self._state, self._coords_list[0]))
-
-        if 'key' in self._state:
+        elif 'key' in self._state:
             print('{0} action{1}({2}): {3}'.format(verb, self._action_id, self._state, self._keyboard_buffer))
-
-        if 'pass' in self._state:
+        elif 'pass' in self._state:
             print('{0} action{1}({2})'.format(verb, self._action_id, self._state))
-
-        if 'box' in self._state:
+        elif 'box' in self._state:
             for _coord in self._coords_list:
                 print('{0} action{1}({2}): {3}'.format(verb, self._action_id, self._state, _coord))
+        else:
+            print('{0} action{1}({2}): {3}'.format(verb, self._action_id, self._state, self._coords_list[0]))
