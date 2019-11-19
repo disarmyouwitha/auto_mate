@@ -10,8 +10,8 @@ from pynput.keyboard import Key, Controller
 class omni_listener():
     # [CONTROLLERS]:
     _stage = None
-    _kb_ctrl = None
-    _ms_ctrl = None
+    _ms_ctrl = None # (Because pyautogui can't click to a not active window)
+    _kb_ctrl = None # (Might replace with pyautogui keyUp/keyDown so we don't have to load this controller.. need to check support on osx/win)
 
     # [MOUSE GLOBALS]:
     _last_click = 0
@@ -105,8 +105,7 @@ class omni_listener():
                 if _held_cnt >= 2:
                     self._check_keyboard_buffer(interrupt=True)
 
-            except AttributeError:
-                # [Pass-through on other special characters]: 
+            except AttributeError: 
                 #print('special key {0} pressed'.format(key))
                 # ^DEBUGG
 
@@ -192,6 +191,7 @@ class omni_listener():
                 if key in _held_keys:
                     _held_keys.remove(key)
 
+                # [Determine how key should be replayed]:
                 if _held_cnt<=1:
                     key_pressed = '{0}|{1}'.format(key, 1)
                 else:
@@ -250,9 +250,30 @@ class omni_listener():
             if self._stage._record > 0:
                 # [If _keyboard_buffer is empty (user is not typing) add Key action]:
                 if len(self._keyboard_buffer) == 0:
-                    key_pressed = '{0}|0'.format(key)
-                    act = action(state='key', coords_list={'x': None, 'y': None}, keyboard_buffer=key_pressed, stage=self._stage)
-                    self._stage._append(act)
+
+                    # [Try to determine if release key should be added, or key upgraded from press to tap]:
+                    _prev_act = self._stage._peek()
+                    (_prev_key_list, _prev_pressed) = self._str_to_key(_prev_act._keyboard_buffer)
+
+                    _same_key = False
+                    if key == _prev_key_list[0]:
+                        _same_key = True
+
+                    key_pressed = None
+                    if _prev_pressed == 1:
+                        if _same_key: 
+                            key_pressed = '{0}|3'.format(_prev_act._keyboard_buffer[:-2])
+                        else:
+                            key_pressed = '{0}|0'.format(key)
+                    elif _prev_pressed == 3:
+                        if _same_key:
+                            key_pressed = None
+                        else:
+                            key_pressed = '{0}|0'.format(key)
+
+                    if key_pressed:
+                        act = action(state='key', coords_list={'x': None, 'y': None}, keyboard_buffer=key_pressed, stage=self._stage)
+                        self._stage._append(act)
 
     def _check_keyboard_buffer(self, interrupt=False):
         if interrupt==True or ((self._last_typed > 0) and (time.time() - self._last_typed) >= 2):
@@ -301,11 +322,12 @@ class omni_listener():
                         self._last_click = time.time()
                         _click_cnt = 1
                     else:
-                        if (time.time() - self._last_click) >= 1:
+                        if (time.time() - self._last_click) >= .5:
                             _click_cnt = 1
+                            self._last_click = time.time()
                         else:
                             _click_cnt = 2
-                        self._last_click = time.time()
+                            self._last_click = 0
 
                     # [Determine left/right click]:
                     if button==Button.left:
