@@ -86,9 +86,20 @@ class main_frame(Frame):
         # [Saving sequence for replay]:
         self.stage.save_sequence()
 
+    def _gui_replay_callback(self):
+        # [Front-pop index from action_list]:
+        _act = self.stage._pop(0)
+        if _act != 0:
+            _act.RUN(self.stage)
+            self.after(200, self._gui_replay_callback)
+        else:
+            print('[Replaying finished]')
+
     def replay_button(self):
         self.set_label_text('Replay')
         self.stage.REPLAY()
+        print('[Replaying sequence]')
+        self._gui_replay_callback()
 
     def set_label_text(self, text=''):
         self.label['text'] = text
@@ -141,9 +152,12 @@ class stage_manager:
     def _append(self, action):
         self._action_items.append(action)
     
-    def _pop(self):
+    def _pop(self, idx=None):
         if len(self._action_items) > 0:
-            return self._action_items.pop()
+            if idx is None:
+                return self._action_items.pop()
+            else:
+                return self._action_items.pop(idx)
         return 0
 
     def _peek(self):
@@ -218,19 +232,20 @@ class stage_manager:
             print('[Starting Replay]: 2sec')
             time.sleep(2)
 
-            # [Replay Actions]:
-            self._replay_sequence()
-
             # [Save Sequence]:
             self.save_sequence()
+
+            # [Replay Actions]:
+            self._replay_sequence()
 
             self._replay_loop_check()
 
     def REPLAY(self):
-        self._record = 0
         self.load_sequence()
-        self._replay_sequence()
+
+        # [GUI handles it's own replay]:
         if self._main_stage is None:
+            self._replay_sequence()
             self._replay_loop_check()
 
     def _replay_sequence(self):

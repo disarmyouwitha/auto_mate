@@ -186,7 +186,8 @@ class action:
                 time.sleep(.25) # small delay after selecting
 
         # [Slight delay between actions]:
-        time.sleep(.25)
+        if stage._main_stage is None:
+            time.sleep(.25)
 
     # [Serializer]: (helper)
     # [jsonpickle objects with no __dict__]:
