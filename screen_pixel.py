@@ -58,17 +58,27 @@ class screen_pixel(object):
             _numpy_rgb = cv2.cvtColor(_numpy_bgr, cv2.COLOR_BGR2RGB)
             self._numpy = _numpy_rgb
             #imageio.imwrite('screen_mss.png', self._numpy)
-    
-    def _check_screen(self):
-        with mss.mss() as sct:
-            _num_mon = len(sct.monitors)
 
+    # [Returns _OS, _RESOLUTION, _RETINA]:
+    def _get_screen_info(self):
+        _RESOLUTION = ''
         _RETINA = False
+        _OS = 'win'
+
+        # [Get information for each monitor]:
+        with mss.mss() as sct: 
+            _num_mon = len(sct.monitors)
+            for screen in sct.monitors:
+                _resolution = '{0}x{1}|'.format(screen.get('width'), screen.get('height'))
+                _RESOLUTION += _resolution
+            _RESOLUTION = _RESOLUTION[:-1] # remove last pipe
+
         if sys.platform == 'darwin':
+            _OS = 'osx'
             if _num_mon <= 2: #0:All,1:First,2:NOT RETINA
                 _RETINA = True
 
-        return _RETINA
+        return (_OS, _RESOLUTION, _RETINA)
 
     def resize_image(self, nemo, scale_percent=50):
         width = int(nemo.shape[1] * scale_percent / 100)

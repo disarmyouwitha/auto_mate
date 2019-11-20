@@ -112,6 +112,15 @@ class stage_manager:
         self._sp = screen_pixel.screen_pixel()
         self._omni = omni_listener.omni_listener(self)
 
+        # [Get screen info]: (Can Wrap action_items[] with header in save_sequence so we can use this info for replay normalization(?))
+        (_os, _resolution, _retina) = self._sp._get_screen_info()
+        self._OS = _os
+        self._RETINA = _retina
+        self._RESOLUTION = _resolution
+        print('_OS: {0}'.format(_os))
+        print('_RETINA: {0}'.format(_retina))
+        print('_RESOLUTION: {0}'.format(_resolution))
+
     def __iter__(self):
         return action.action_iterator(self)
 
@@ -121,10 +130,12 @@ class stage_manager:
     def _pop(self):
         if len(self._action_items) > 0:
             return self._action_items.pop()
+        return 0
 
     def _peek(self):
         if len(self._action_items) > 0:
             return self._action_items[len(self._action_items)-1]
+        return 0
 
     def save_sequence(self, file_name=None):
         _json_seq = {}

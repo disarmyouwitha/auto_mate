@@ -55,8 +55,7 @@ class action:
 
             # [If BOX try to Capture screenshot from coords]: (for SSIM)
             if 'box' in self._state:
-                _RETINA = stage._sp._check_screen()
-                _numpy_array = stage._sp.grab_rect(self._coords_list[0],self._coords_list[1], mod=(2 if _RETINA else 1), nemo=stage._sp._numpy)
+                _numpy_array = stage._sp.grab_rect(self._coords_list[0],self._coords_list[1], mod=(2 if stage._RETINA else 1), nemo=stage._sp._numpy)
 
                 # [Compress and save numpy array of image]:
                 _bytes = io.BytesIO()
@@ -99,8 +98,7 @@ class action:
             _loaded = numpy.load(io.BytesIO(self._control_numpy_save))
         _control_array = _loaded['a']
 
-        _RETINA = stage._sp._check_screen()
-        test = stage._sp.grab_rect(self._coords_list[0],self._coords_list[1], mod=(2 if _RETINA else 1))
+        test = stage._sp.grab_rect(self._coords_list[0],self._coords_list[1], mod=(2 if stage._RETINA else 1))
         ssim_score = stage._sp.check_ssim(_control_array, test)
 
         if _DEBUGG:
