@@ -68,7 +68,7 @@ class screen_pixel(object):
         # [Get information for each monitor]:
         with mss.mss() as sct: 
             _num_mon = len(sct.monitors)
-            for screen in sct.monitors:
+            for screen in sct.monitors[1:]:
                 _resolution = '{0}x{1}|'.format(screen.get('width'), screen.get('height'))
                 _RESOLUTION += _resolution
             _RESOLUTION = _RESOLUTION[:-1] # remove last pipe

@@ -288,15 +288,14 @@ class omni_listener():
     def on_click(self, x, y, button, pressed):
         _int_x = int(x)
         _int_y = int(y)
+        if pressed:
+            self._last_int_x = int(x)
+            self._last_int_y = int(y)
 
         if self._stage._record > 0:
             self._check_keyboard_buffer(interrupt=True)
-
+            # [Capture screen on click]: (For clean drag event)
             if pressed:
-                self._last_int_x = int(x)
-                self._last_int_y = int(y)
-
-                # [Capture screen on click]: (For clean drag event)
                 self._stage._sp.capture()
             else: # [RELEASED]:
                 # [Turn off PASS_input after click]:

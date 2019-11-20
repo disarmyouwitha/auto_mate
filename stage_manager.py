@@ -2,6 +2,7 @@ import os
 import sys
 import time
 import json
+import glob
 import action
 import threading
 import screen_pixel
@@ -13,6 +14,8 @@ from tkinter import Tk, Frame, Menu
 
 class main_frame(Frame):
     stage = None
+    _start_button_x = None
+    _start_button_y = None
 
     def __init__(self, master=None, stage=None):
         Frame.__init__(self, master)
@@ -26,7 +29,7 @@ class main_frame(Frame):
         self.button.pack(pady=15)
         self.pack()
 
-        self.button = tk.Button(self, text='Stop Recording', command=self.stop_button)
+        self.button = tk.Button(self, text='Save Recording', command=self.stop_button)
         self.button.pack(pady=15)
         self.pack()
 
@@ -58,35 +61,33 @@ class main_frame(Frame):
         filemenu.add_command(label="Exit", underline=0, command=self.on_exit)
         menubar.add_cascade(label="File", underline=0, menu=filemenu)
 
-    def on_exit(self):
-        self.quit()
-
     # [Start recording mouse/keyboard actions]:
     def start_button(self):
         print('[Mouse/Keyboard listening! Press ESC to stop recording]')
+        self._start_button_x = self.stage._omni._last_int_x
+        self._start_button_y = self.stage._omni._last_int_y
         self.set_label_text('running')
         self.stage._record = 1
 
+    # [Stop]: (and Save?)
     def stop_button(self):
-        self.set_label_text(' not running')
         self.stage._record = 0
+        self.set_label_text('not running')
 
-        # [Saving sequence to JSON file for replay]:
-        _file_name = ''
-        if self.stage._file_name is None:
-            _file_name = input('[Do you wish to save replay?] (`filename.json` for yes): ')
-        else:
-            _file_name = self.stage._file_name
+        if self._start_button_y:
+            _diff_x = abs(self._start_button_x-self.stage._omni._last_int_x)
+            _diff_y = abs(self._start_button_y-self.stage._omni._last_int_y)
 
-        # [If not blank, save file]:
-        if _file_name != '':
-            self.stage.save_sequence(_file_name)
+            if (_diff_x < 150 or _diff_y < 100):
+                print('[pop action and remove click on stop]')
+                self.stage._pop()
+
+        # [Saving sequence for replay]:
+        self.stage.save_sequence()
 
     def replay_button(self):
         self.set_label_text('Replay')
         self.stage.REPLAY()
-
-    # @todo add GUI hooks for Save button
 
     def set_label_text(self, text=''):
         self.label['text'] = text
@@ -94,11 +95,22 @@ class main_frame(Frame):
     def listbox_insert(self, item):
         self.listbox.insert(tk.END, item)
 
+    def listbox_selected(self):
+        for item in map(int, self.listbox.curselection()):
+                _index = item
+
+        try:
+            return self.listbox.get(_index)
+        except:
+            return None
+
+    def on_exit(self):
+        self.quit()
+
 
 class stage_manager:
     _sp = None
     _record = 0
-    _gui = False
     _omni = None
     _save_npz = None
     _file_name = None
@@ -137,41 +149,62 @@ class stage_manager:
             return self._action_items[len(self._action_items)-1]
         return 0
 
-    def save_sequence(self, file_name=None):
-        _json_seq = {}
+    # [Saving sequence to JSON file for replay]:
+    def save_sequence(self):
+        #if self._main_stage is None: # (?)
+        if self._file_name is None:
+            self._file_name = input('[Do you wish to save replay?] (`filename.json` for yes): ')
 
-        if file_name is None:
-            file_name = input('What would you like the filename to be?: ')
+        # STRIP ESC/TAB SEQ FROM _file_name
 
-        self._file_name = file_name
+        # [If not blank, save file]:
+        if self._file_name != '':
+            _json_seq = {}
 
-        # [Update json_data]:
-        for act in self:
-            _json_seq.update(act._JSON())
+            # [Update json_data]:
+            for act in self:
+                _json_seq.update(act._JSON())
 
-        print('[Saving sequence for replay]: {0}'.format(file_name))
-        with open(file_name, 'w+') as fp:
-            json.dump(_json_seq, fp)
+            print('[Saved sequence for replay]: {0}'.format(self._file_name))
+            with open(self._file_name, 'w+') as fp:
+                json.dump(_json_seq, fp)
 
-    def load_sequence(self, file_name=None):
-        self._action_items = []
+            # [Add to list in GUI]:
+            self._main_stage.listbox_insert(self._file_name)
 
-        if file_name is None:
-            file_name = input('What file would you like to replay?: ')
+    # []: Load to take input from listbox
+    def load_sequence(self):
+        if self._main_stage is None:
+            if self._file_name is None:
+                self._file_name = input('What file would you like to replay?: (blank for last replay)')
+        else: # GUI:
+            # CHECK LISTBOX SELECTED
+            self._file_name = self._main_stage.listbox_selected()
 
-        print('[Loading replay file]: {0}'.format(file_name))
-        with open(file_name) as _json_seq:
-            sequence = json.load(_json_seq)
+        # HANDLE IF NO FILE NAME WAS PROVIDED: LOAD FROM STAGE.ACTION_LIST
+        if self._file_name != '':
+            print('[Loading replay file]: {0}'.format(self._file_name))
+            self._action_items = []
 
-        for _json_act in sequence:
-            act = action.action(JSON_STR={_json_act: sequence[_json_act]}, stage=self)
-            self._action_items.append(act)
+            with open(self._file_name) as _json_seq:
+                sequence = json.load(_json_seq)
+
+            for _json_act in sequence:
+                act = action.action(JSON_STR={_json_act: sequence[_json_act]}, stage=self)
+                self._action_items.append(act)
+        else:
+            print('[Loading replay from memory]')
 
     def GUI(self):
         root = Tk()
-        self._gui = True
         with self._omni.mouse_listener, self._omni.keyboard_listener:
             self._main_stage = main_frame(master=root, stage=self)
+
+            # [Fill listbox in GUI with *.json files]:
+            for file_name in glob.glob('*.json'):
+                self._main_stage.listbox_insert(file_name)
+
+            # [Start the main loop]:
             self._main_stage.mainloop()
 
     def RECORD(self): #(blocking)
@@ -188,24 +221,16 @@ class stage_manager:
             # [Replay Actions]:
             self._replay_sequence()
 
-            # [Saving sequence to JSON file for replay]:
-            _file_name = ''
-            if self._file_name is None:
-                _file_name = input('[Do you wish to save replay?] (`filename.json` for yes): ')
-            else:
-                _file_name = self._file_name
-
-            # [If not blank, save file]:
-            if _file_name != '':
-                self.save_sequence(_file_name)
+            # [Save Sequence]:
+            self.save_sequence()
 
             self._replay_loop_check()
 
     def REPLAY(self):
         self._record = 0
-        self.load_sequence(self._file_name)
+        self.load_sequence()
         self._replay_sequence()
-        if not self._gui:
+        if self._main_stage is None:
             self._replay_loop_check()
 
     def _replay_sequence(self):

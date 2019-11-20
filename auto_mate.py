@@ -39,7 +39,12 @@ if __name__ == "__main__":
     # [Check command line arguments for mode]:
     accepted_modes = ['record', 'replay', 'gui']
 
-    _mode = sys.argv[1]
+    # [Get mode from command line, otherwise specify GUI]:
+    try:
+        _mode = sys.argv[1]
+    except:
+        _mode = 'gui'
+
     if _mode in accepted_modes:
         # [Check command line arguments for file_name]:
         try:
