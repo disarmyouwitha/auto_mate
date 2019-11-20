@@ -3,49 +3,38 @@ import sys
 import time
 import json
 import action
+import threading
 import screen_pixel
 import omni_listener
+import tkinter as tk
+from tkinter import Tk, Frame, Menu
 
 # [Stage Manager to organize actions]:
 
-# [GUI Support]
-import tkinter as tk
-from tkinter import Tk, Frame, Menu
-from concurrent import futures
+class main_frame(Frame):
+    stage = None
 
-thread_pool_executor = futures.ThreadPoolExecutor(max_workers=2)
-
-# class variables
-_sp = None
-_omni = None
-_record = None
-_save_npz = None
-_file_name = None
-_action_items = None
-
-class MainFrame(tk.Frame):
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, master=None, stage=None):
+        Frame.__init__(self, master)
         self.label = tk.Label(self, text='not running')
         self.label.pack()
+
         self.listbox = tk.Listbox(self)
         self.listbox.pack()
-        self.button = tk.Button(
-            self, text='Start Recording', command=self.on_button)
+
+        self.button = tk.Button(self, text='Start Recording', command=self.start_button)
         self.button.pack(pady=15)
         self.pack()
 
-        self.button = tk.Button(
-            self, text='Stop Recording', command=self.stop_button)
+        self.button = tk.Button(self, text='Stop Recording', command=self.stop_button)
         self.button.pack(pady=15)
         self.pack()
 
-        self._action_items = []
+        self.button = tk.Button(self, text='Replay Recording', command=self.replay_button)
+        self.button.pack(pady=15)
+        self.pack()
 
-        self._sp = screen_pixel.screen_pixel()
-        # self._omni = omni_listener.omni_listener(self)
-
+        self.stage = stage
         self.initUI()
 
     def initUI(self):
@@ -53,49 +42,51 @@ class MainFrame(tk.Frame):
         self.master.geometry("500x500")
 
         menubar = Menu(self.master)
-
         self.master.config(menu=menubar)
 
-        fileMenu = Menu(menubar)
-
-        submenu = Menu(fileMenu)
+        filemenu = Menu(menubar)
+        submenu = Menu(filemenu)
         submenu.add_command(label="Item1")
         submenu.add_command(label="Item2")
         submenu.add_command(label="Item3")
+
         # @todo add ability to load in replay from folder
-        fileMenu.add_cascade(label='Import', menu=submenu, underline=0)
+        filemenu.add_cascade(label='Import', menu=submenu, underline=0)
 
-        fileMenu.add_separator()
+        filemenu.add_separator()
 
-        fileMenu.add_command(label="Exit", underline=0, command=self.onExit)
-        menubar.add_cascade(label="File", underline=0, menu=fileMenu)
+        filemenu.add_command(label="Exit", underline=0, command=self.on_exit)
+        menubar.add_cascade(label="File", underline=0, menu=filemenu)
 
-    def onExit(self):
+    def on_exit(self):
         self.quit()
 
-    def _append(self, action):
-        self._action_items.append(action)
-        #pipe output into window?
+    # [Start recording mouse/keyboard actions]:
+    def start_button(self):
+        print('[Mouse/Keyboard listening! Press ESC to stop recording]')
+        self.set_label_text('running')
+        self.stage._record = 1
 
     def stop_button(self):
-        print('stop button')
-        self._record = 0
+        self.set_label_text(' not running')
+        self.stage._record = 0
 
-        # stop the listeners
-        # @todo add save of replay
+        # [Saving sequence to JSON file for replay]:
+        _file_name = ''
+        if self.stage._file_name is None:
+            _file_name = input('[Do you wish to save replay?] (`filename.json` for yes): ')
+        else:
+            _file_name = self.stage._file_name
 
-    def on_button(self):
-        # global mouse_listener
-        # global keyboard_listener
-        # mouse_listener = ms.Listener(on_click=on_click, on_move=on_move)
-        # keyboard_listener = kb.Listener(on_press=on_press, on_release=on_release)
-        # mouse_listener.start()
-        # keyboard_listener.start()
-        self._omni = omni_listener.omni_listener(self)
+        # [If not blank, save file]:
+        if _file_name != '':
+            self.stage.save_sequence(_file_name)
 
-        print('Button clicked')
-        self._record = 1
-        thread_pool_executor.submit(self.blocking_code)
+    def replay_button(self):
+        self.set_label_text('Replay')
+        self.stage.REPLAY()
+
+    # @todo add GUI hooks for Save button
 
     def set_label_text(self, text=''):
         self.label['text'] = text
@@ -103,28 +94,18 @@ class MainFrame(tk.Frame):
     def listbox_insert(self, item):
         self.listbox.insert(tk.END, item)
 
-    def blocking_code(self):
-        # non blocking listener allows thread to run while window is open
-        self._record = 1
-        # communicate with window
-        self.after(0, self.set_label_text, 'running')
-
-        with self._omni.mouse_listener, self._omni.keyboard_listener:
-            print('here')
-            # [Recording loop]:
-            print('[Mouse/Keyboard listening! Press CTRL to stop recording]')
-            while self._record > 0:
-                time.sleep(1)
-                #time.sleep(.5)
-                #pass (?)
-
-
-        self.after(0, self.set_label_text, ' not running')
-
 
 class stage_manager:
+    _sp = None
+    _record = 0
+    _gui = False
+    _omni = None
+    _save_npz = None
+    _file_name = None
+    _main_stage = None
+    _action_items = None
 
-    def __init__(self, file_name, save_npz=False):
+    def __init__(self, file_name=None, save_npz=False):
         self._action_items = []
         self._save_npz = save_npz
         self._file_name = file_name
@@ -175,11 +156,18 @@ class stage_manager:
             act = action.action(JSON_STR={_json_act: sequence[_json_act]}, stage=self)
             self._action_items.append(act)
 
-    def RECORD(self):
+    def GUI(self):
+        root = Tk()
+        self._gui = True
+        with self._omni.mouse_listener, self._omni.keyboard_listener:
+            self._main_stage = main_frame(master=root, stage=self)
+            self._main_stage.mainloop()
+
+    def RECORD(self): #(blocking)
         self._record = 1
         with self._omni.mouse_listener, self._omni.keyboard_listener:
             # [Recording loop]:
-            print('[Mouse/Keyboard listening! Press CTRL to stop recording]')
+            print('[Mouse/Keyboard listening! Press ESC to stop recording]')
             while self._record > 0:
                 time.sleep(1) #pass (?)
 
@@ -204,13 +192,10 @@ class stage_manager:
 
     def REPLAY(self):
         self._record = 0
-        if self._file_name and '.json' in self._file_name:
-            self.load_sequence(self._file_name)
-            self._replay_sequence()
+        self.load_sequence(self._file_name)
+        self._replay_sequence()
+        if not self._gui:
             self._replay_loop_check()
-        else:
-            print('[Syntax: `python3 auto_mate.py replay filename.json`]')
-            os._exit(1)
 
     def _replay_sequence(self):
         print('[Replaying sequence]')
