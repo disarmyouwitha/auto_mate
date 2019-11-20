@@ -3,119 +3,201 @@ import sys
 import time
 import json
 import glob
+import shutil # shutil.rmtree(path, ignore_errors=False, onerror=None)¶
 import action
+import pathlib
 import threading
 import screen_pixel
 import omni_listener
 import tkinter as tk
+#from pathlib import Path
 from tkinter import Tk, Frame, Menu
 
 # [Stage Manager to organize actions]:
 
 class main_frame(Frame):
-    stage = None
+    _stage = None
+    _label = None
+    _record_menu = None
+    _button_width = None
     _start_button_x = None
     _start_button_y = None
+    _start_stop_button = None
 
     def __init__(self, master=None, stage=None):
         Frame.__init__(self, master)
-        self.label = tk.Label(self, text='not running')
-        self.label.pack()
+        self._stage = stage
+        self._button_width = 20
 
-        self.listbox = tk.Listbox(self)
-        self.listbox.pack()
+        self.init_menu()
+        self.init_frame()
 
-        self.button = tk.Button(self, text='Start Recording', command=self.start_button)
-        self.button.pack(pady=15)
-        self.pack()
-
-        self.button = tk.Button(self, text='Save Recording', command=self.stop_button)
-        self.button.pack(pady=15)
-        self.pack()
-
-        self.button = tk.Button(self, text='Replay Recording', command=self.replay_button)
-        self.button.pack(pady=15)
-        self.pack()
-
-        self.stage = stage
-        self.initUI()
-
-    def initUI(self):
-        self.master.title("Automate")
+    def init_menu(self):
+        self.master.title("[auto_mate]")
         self.master.geometry("500x500")
 
-        menubar = Menu(self.master)
-        self.master.config(menu=menubar)
+        # [Create Menu objects]:
+        menu_bar = Menu(self.master)
+        file_menu = Menu(menu_bar)
+        record_menu = Menu(menu_bar)
+        import_sub_menu = Menu(file_menu)
 
-        # [NEAT!]:
-        filemenu = Menu(menubar)
-        submenu = Menu(filemenu)
-        submenu.add_command(label="Item1")
-        submenu.add_command(label="Item2")
-        submenu.add_command(label="Item3")
+        # [Add file_menu objects]:
+        menu_bar.add_cascade(label="File", underline=0, menu=file_menu)
+        file_menu.add_cascade(label='Import', menu=import_sub_menu, underline=0)
+        file_menu.add_separator()
+        file_menu.add_cascade(label='Browse Files...', underline=0) # NEED TO LOOK UP HOW TO DO BROWSE FILES
+        file_menu.add_separator()
+        file_menu.add_command(label="Exit", underline=0, command=self.on_exit)
 
-        # @todo add ability to load in replay from folder
-        filemenu.add_cascade(label='Import', menu=submenu, underline=0)
+        '''
+        # [NEAT!]: (Walk folders and add to menu) (?)
+        FOLDER_DIR = '.'
+        for root, dirnames, filenames in os.walk(FOLDER_DIR):
+            for filename in fnmatch.filter(filenames, '*'):
+                if filename[0] != '.':
+                    file_matches.append(os.path.join(root, filename))
+            for dirname in fnmatch.filter(dirnames, '*'):
+                dir_matches.append(os.path.join(root, dirname))
+        '''
 
-        filemenu.add_separator()
+        # [Add import_sub_menu objects]: 
+        import_sub_menu.add_command(label="Item1")
+        import_sub_menu.add_command(label="Item2")
+        import_sub_menu.add_command(label="Item3")
+        # ^(Todo: add ability to load in replay from folder)
+        # ... (Walk current directory and add folders to menu) (?)
+        # ... when you click folder, it sets that as "_CWD" and loads .json files from that folder
 
-        filemenu.add_command(label="Exit", underline=0, command=self.on_exit)
-        menubar.add_cascade(label="File", underline=0, menu=filemenu)
+        # [Add record_menu objects]:
+        menu_bar.add_cascade(label="Recording...", underline=0, menu=record_menu)
+        record_menu.add_command(label="Start Recording", underline=0, command=self.start_stop_button) 
+        record_menu.add_command(label="Save Recording", underline=0, command=self.save_button)
+        record_menu.add_command(label="Replay Recording", underline=0, command=self.replay_button)
+        record_menu.add_command(label="Delete Recording", underline=0, command=self.delete_button)
 
-    # [Start recording mouse/keyboard actions]:
-    def start_button(self):
-        print('[Mouse/Keyboard listening! Press ESC to stop recording]')
-        self._start_button_x = self.stage._omni._last_int_x
-        self._start_button_y = self.stage._omni._last_int_y
-        self.set_label_text('running')
-        self.stage._record = 1
+        # [Add Menu objects to Frame]:
+        self.master.config(menu=menu_bar)
+        self._record_menu = record_menu
 
-    # [Stop]: (and Save?)
-    def stop_button(self):
-        self.stage._record = 0
-        self.set_label_text('not running')
+    def init_frame(self):
+        # [Set label for displaying messages]:
+        self._label = tk.Label(self, text='', width=50)
+        self.set_label_text('[Load *.json files or Start Recording]:')
+        self._label.pack(pady=10)
 
-        if self._start_button_y:
-            _diff_x = abs(self._start_button_x-self.stage._omni._last_int_x)
-            _diff_y = abs(self._start_button_y-self.stage._omni._last_int_y)
+        self.listbox = tk.Listbox(self, selectmode='single')
+        #self.listbox = tk.Listbox(self, selectmode='multiple') # needs some work before replay, etc would work with multiple
+        self.listbox.pack()
 
-            if (_diff_x < 150 or _diff_y < 100):
-                print('[pop action and remove click on stop]')
-                self.stage._pop()
+        # [Fill listbox in GUI with *.json files]:
+        for file_name in glob.glob('*.json'):
+            self.listbox_insert(file_name)
+        # ^(Replace with os.walk(?))
+
+        #Toggle: Start Recording|Stop Recording
+        self._start_stop_button = tk.Button(self, text='Start Recording', width=self._button_width, command=self.start_stop_button)
+        self._start_stop_button.pack(pady=15)
+        self.pack()
+
+        _button = tk.Button(self, text='Save Recording', width=self._button_width, command=self.save_button)
+        _button.pack(pady=15)
+        self.pack()
+
+        _button = tk.Button(self, text='Replay Recording', width=self._button_width, command=self.replay_button)
+        _button.pack(pady=15)
+        self.pack()
+
+        _button = tk.Button(self, text='Delete Recording', width=self._button_width, command=self.delete_button)
+        _button.pack(pady=15)
+        self.pack()
+
+    # [Start/stop recording mouse/keyboard actions]:
+    def start_stop_button(self):
+        if self._stage._record==0: # off, START:
+            self.set_label_text('[Mouse/Keyboard listeners started!]')
+            self._record_menu.entryconfigure(0, label='Stop Recording')
+            self._start_stop_button['text'] = 'Stop Recording'
+            self._start_button_x = self._stage._omni._last_int_x
+            self._start_button_y = self._stage._omni._last_int_y
+            self._stage._record = 1
+        elif self._stage._record==1: # on, STOP:
+            self.set_label_text('[Mouse/Keyboard listeners stopped]')
+            self._record_menu.entryconfigure(0, label='Start Recording')
+            self._start_stop_button['text'] = 'Start Recording'
+            self._stage._record = 0
+
+            # [Check to see if start click is near stop click]: (so we can remove the click on start/stop)
+            _diff_x = abs(self._start_button_x-self._stage._omni._last_int_x)
+            _diff_y = abs(self._start_button_y-self._stage._omni._last_int_y)
+            if (_diff_x < 210 or _diff_y < 30):
+                print('[_pop last action: Remove click on Save Recording]')
+                self._stage._pop()
+
+            # [Copy _action_items to _action_memory and clear when stopped]:
+            self._stage._action_memory = self._stage._action_items.copy()
+            self._stage._action_items = []
+        elif self._stage._record==-1: # replay, STOP: (clear action_list to reset replay(?))
+            self._record_menu.entryconfigure(0, label='BOOYA Button')
+            self._start_stop_button['text'] = 'BOOYA Button'
+            self.set_label_text('[BOOYA!]')
+            self._stage._record = 0
+
+    def save_button(self):
+        self._stage._record = 0
+        self.set_label_text('[Saving file]: Provide filename on command line!')
+        # ^(Add pop-up asking for filename) (?)
 
         # [Saving sequence for replay]:
-        self.stage.save_sequence()
+        self._stage.save_sequence()
 
     def _gui_replay_callback(self):
         # [Front-pop index from action_list]:
-        _act = self.stage._pop(0)
+        _act = self._stage._pop(0)
         if _act != 0:
-            _act.RUN(self.stage)
+            _act.RUN(self._stage)
             self.after(200, self._gui_replay_callback)
         else:
-            print('[Replaying finished]')
+            self.set_label_text('[Replay finished]: {0}'.format('FROM MEMORY' if self._stage._file_name is None else self._stage._file_name))
 
     def replay_button(self):
-        self.set_label_text('Replay')
-        self.stage.REPLAY()
-        print('[Replaying sequence]')
-        self._gui_replay_callback()
+        if self._stage._record==0:
+            self._stage.REPLAY()
+            self._gui_replay_callback()
+
+    def delete_button(self):
+        (_idx, _selected) = self.listbox_selected()
+        self.set_label_text('[Deleted replay]: {0}'.format(_selected))
+        self.listbox_delete(_idx)
+        os.remove(_selected)
 
     def set_label_text(self, text=''):
-        self.label['text'] = text
+        self._label['text'] = text.center(100)
 
-    def listbox_insert(self, item):
-        self.listbox.insert(tk.END, item)
+    def listbox_insert(self, name):
+        _found = False
+        for _value in self.listbox.get(0, tk.END):
+            if _value==name:
+                _found = True
+
+        if _found is False:
+            self.listbox.insert(tk.END, name)
+
+    def listbox_delete(self, index):
+        self.listbox.delete(index)
 
     def listbox_selected(self):
         for item in map(int, self.listbox.curselection()):
-                _index = item
+            _index = item
 
         # [Return file_name from listbox]:
         try:
-            return self.listbox.get(_index)
+            return (_index, self.listbox.get(_index))
         except:
-            return None
+            return (None, None)
+
+    def listbox_run_all(self):
+        print('woomy!')
 
     def on_exit(self):
         self.quit()
@@ -129,9 +211,11 @@ class stage_manager:
     _file_name = None
     _main_stage = None
     _action_items = None
+    _action_memory = None
 
     def __init__(self, file_name=None, save_npz=False):
         self._action_items = []
+        self._action_memory = []
         self._save_npz = save_npz
         self._file_name = file_name
         self._sp = screen_pixel.screen_pixel()
@@ -178,7 +262,7 @@ class stage_manager:
             _json_seq = {}
 
             # [Update json_data]:
-            for act in self:
+            for act in self._action_memory:
                 _json_seq.update(act._JSON())
 
             print('[Saved sequence for replay]: {0}'.format(self._file_name))
@@ -193,11 +277,9 @@ class stage_manager:
             if self._file_name is None:
                 self._file_name = input('What file would you like to replay?: (blank for last replay)')
         else: # GUI:
-            self._file_name = self._main_stage.listbox_selected()
+            (_idx, self._file_name) = self._main_stage.listbox_selected()
 
-        # HANDLE IF NO FILE NAME WAS PROVIDED: LOAD FROM STAGE.ACTION_LIST
-        if self._file_name != '':
-            print('[Loading replay file]: {0}'.format(self._file_name))
+        if self._file_name is not None and self._file_name != '':
             self._action_items = []
 
             with open(self._file_name) as _json_seq:
@@ -206,20 +288,18 @@ class stage_manager:
             for _json_act in sequence:
                 act = action.action(JSON_STR={_json_act: sequence[_json_act]}, stage=self)
                 self._action_items.append(act)
-        else:
-            print('[Loading replay from memory]')
+        else: # if no _file_name was provided, replay from memory
+            if len(self._action_items)==0:
+                self._action_items = self._action_memory.copy()
+            elif len(self._action_memory)==0:
+                self._action_memory = self._action_items.copy()
 
     def GUI(self):
         root = Tk()
         with self._omni.mouse_listener, self._omni.keyboard_listener:
             self._main_stage = main_frame(master=root, stage=self)
-
-            # [Fill listbox in GUI with *.json files]:
-            for file_name in glob.glob('*.json'):
-                self._main_stage.listbox_insert(file_name)
-
-            # [Start the main loop]:
             self._main_stage.mainloop()
+            # ^(Start the main loop)
 
     def RECORD(self): #(blocking)
         self._record = 1
@@ -244,15 +324,17 @@ class stage_manager:
         self.load_sequence()
 
         # [GUI handles it's own replay]:
-        if self._main_stage is None:
+        if self._main_stage is not None:
+            self._main_stage.set_label_text('[Replay sequence]: {0}'.format('FROM MEMORY' if self._file_name is None else self._file_name))
+        else:
             self._replay_sequence()
             self._replay_loop_check()
 
     def _replay_sequence(self):
-        print('[Replaying sequence]')
+        print('[Replay sequence]: {0}'.format('FROM MEMORY' if self._file_name is None else self._file_name))
         for act in self._action_items:
             act.RUN(self)
-        print('[Replaying finished]')
+        print('[Replay finished]: {0}'.format('FROM MEMORY' if self._file_name is None else self._file_name))
 
     def _replay_loop_check(self):
         # [See if user wants to continue loop]:

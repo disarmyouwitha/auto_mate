@@ -21,18 +21,21 @@ def timer(msg):
     end = time.time()
     print('%s: %.02fms'%(msg, (end-start)*1000))
 
+# [0]: (Check x,y on double-click?)
+# [1]: python3 docker (??)
 
 # [x]: OSX errors on High Sierra 10.13.6: (https://developer.apple.com/documentation/code_diagnostics/main_thread_checker)
 # 2019-11-20 04:35:05.364 Python[1805:11532996] pid(1805)/euid(0) is calling TIS/TSM in non-main thread environment, ERROR : This is NOT allowed. Please call TIS/TSM in main thread!!!
-# [-]: # @todo add GUI hooks for Save button
 # [0]: ^ (If using pyautogui for key: press = keyDown, release = keyUp, both = press) https://pyautogui.readthedocs.io/en/latest/keyboard.html
 # [1]: (If using pyautogui for mouse: check vs Highlighting effectivness vs pynput press/release) https://pyautogui.readthedocs.io/en/latest/mouse.html
 #       >>>pyautogui.mouseDown(button='right')  # press the right button down
-#       >>> pyautogui.mouseUp(button='right', x=100, y=200)  
+#       >>> pyautogui.mouseUp(button='right', x=100, y=200)
+
 # [2]: USE _get_screen_info(): (Can Wrap action_items[] with header in save_sequence so we can use this info for replay normalization(?))
 # [-]: Browser mode will open browser window for user at specified x,y and width,height (or fullscreen) so that tests can be made more consistent across computers
 # [-]: OSX/Windows mode will attempt to flip ['minimize', 'restore', 'close'] x,y (within 5px of ^browser._close_x,browser._close_y) from mac to windows (or other)
 # [-]: ^(Will need to record if sequence was saved on OSX/Windows,/w what modes?)(basically wrap JSON in header array /w file_name, operating_system, etc)
+
 # [0]: MIRROR actions across screen / can set up same page on left/right screen, record on left, and replay on right.
 # [1]: Ability to capture Replay of actions (going through form) BUT rather than using captured keystrokes, pass in data for replay
 # [2]: Tweening / Easing for cooler replay?

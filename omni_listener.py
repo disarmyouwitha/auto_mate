@@ -341,6 +341,7 @@ class omni_listener():
                         self._stage._append(act)
                     else:
                         # [If double-click was made, increment previous single-click]:
+                        # ^(Check x,y for double-click check?)
                         _prev_act = self._stage._peek()
                         if '-click|1' in _prev_act._state:
                             _state_split = _prev_act._state.split('-')
