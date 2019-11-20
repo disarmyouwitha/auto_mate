@@ -22,6 +22,8 @@ def timer(msg):
     print('%s: %.02fms'%(msg, (end-start)*1000))
 
 
+# [x]: OSX errors on High Sierra 10.13.6: (https://developer.apple.com/documentation/code_diagnostics/main_thread_checker)
+# 2019-11-20 04:35:05.364 Python[1805:11532996] pid(1805)/euid(0) is calling TIS/TSM in non-main thread environment, ERROR : This is NOT allowed. Please call TIS/TSM in main thread!!!
 # [-]: # @todo add GUI hooks for Save button
 # [0]: ^ (If using pyautogui for key: press = keyDown, release = keyUp, both = press) https://pyautogui.readthedocs.io/en/latest/keyboard.html
 # [1]: (If using pyautogui for mouse: check vs Highlighting effectivness vs pynput press/release) https://pyautogui.readthedocs.io/en/latest/mouse.html
