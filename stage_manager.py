@@ -47,6 +47,7 @@ class main_frame(Frame):
         menubar = Menu(self.master)
         self.master.config(menu=menubar)
 
+        # [NEAT!]:
         filemenu = Menu(menubar)
         submenu = Menu(filemenu)
         submenu.add_command(label="Item1")
@@ -99,6 +100,7 @@ class main_frame(Frame):
         for item in map(int, self.listbox.curselection()):
                 _index = item
 
+        # [Return file_name from listbox]:
         try:
             return self.listbox.get(_index)
         except:
@@ -155,7 +157,7 @@ class stage_manager:
         if self._file_name is None:
             self._file_name = input('[Do you wish to save replay?] (`filename.json` for yes): ')
 
-        # STRIP ESC/TAB SEQ FROM _file_name
+        # STRIP ESC/TAB SEQ FROM _file_name (?)
 
         # [If not blank, save file]:
         if self._file_name != '':
@@ -172,13 +174,11 @@ class stage_manager:
             # [Add to list in GUI]:
             self._main_stage.listbox_insert(self._file_name)
 
-    # []: Load to take input from listbox
     def load_sequence(self):
         if self._main_stage is None:
             if self._file_name is None:
                 self._file_name = input('What file would you like to replay?: (blank for last replay)')
         else: # GUI:
-            # CHECK LISTBOX SELECTED
             self._file_name = self._main_stage.listbox_selected()
 
         # HANDLE IF NO FILE NAME WAS PROVIDED: LOAD FROM STAGE.ACTION_LIST
@@ -237,6 +237,7 @@ class stage_manager:
         print('[Replaying sequence]')
         for act in self._action_items:
             act.RUN(self)
+        print('[Replaying finished]')
 
     def _replay_loop_check(self):
         # [See if user wants to continue loop]:
