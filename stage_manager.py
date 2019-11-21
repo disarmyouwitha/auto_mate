@@ -18,7 +18,9 @@ from tkinter import Tk, Frame, Menu
 class main_frame(Frame):
     _stage = None
     _label = None
+    _list_box = None
     _record_menu = None
+    _save_handler = None
     _button_width = None
     _start_button_x = None
     _start_button_y = None
@@ -82,38 +84,34 @@ class main_frame(Frame):
 
     def init_frame(self):
         # [Set label for displaying messages]:
-        self._label = tk.Label(self, text='', width=50)
-        self.set_label_text('[Load *.json files or Start Recording]:')
-        self._label.pack(pady=10)
+        self._label = tk.Label(self.master, text='[Load *.json files or Start Recording]:', width=50)
+        self._label.grid(row=1)
 
-        self.listbox = tk.Listbox(self, selectmode='single')
-        #self.listbox = tk.Listbox(self, selectmode='multiple') # needs some work before replay, etc would work with multiple
-        self.listbox.pack()
+        self._list_box = tk.Listbox(self.master, selectmode=tk.SINGLE) # Needs some work before: tk.EXTENDED
+        self._list_box.grid(row=2)
 
-        # [Fill listbox in GUI with *.json files]:
+        # [Fill _list_box in GUI with *.json files]:
         for file_name in glob.glob('*.json'):
             self.listbox_insert(file_name)
         # ^(Replace with os.walk(?))
 
-        #Toggle: Start Recording|Stop Recording
-        self._start_stop_button = tk.Button(self, text='Start Recording', width=self._button_width, command=self.start_stop_button)
-        self._start_stop_button.pack(pady=15)
-        self.pack()
+        # [Toggle]: (Start Recording|Stop Recording)
+        self._start_stop_button = tk.Button(self.master, text='Start Recording', width=self._button_width, command=self.start_stop_button)
+        self._start_stop_button.grid(row=3)
 
-        _button = tk.Button(self, text='Save Recording', width=self._button_width, command=self.save_button)
-        _button.pack(pady=15)
-        self.pack()
+        # [Toggle]: (Save Recording|Filename Input)
+        self._save_handler = tk.Button(self.master, text='Save Recording', width=self._button_width, command=self.save_button)
+        self._save_handler.grid(row=4)
 
-        _button = tk.Button(self, text='Replay Recording', width=self._button_width, command=self.replay_button)
-        _button.pack(pady=15)
-        self.pack()
+        _button = tk.Button(self.master, text='Replay Recording', width=self._button_width, command=self.replay_button)
+        _button.grid(row=5)
 
-        _button = tk.Button(self, text='Delete Recording', width=self._button_width, command=self.delete_button)
-        _button.pack(pady=15)
-        self.pack()
+        _button = tk.Button(self.master, text='Delete Recording', width=self._button_width, command=self.delete_button)
+        _button.grid(row=6)
 
     # [Start/stop recording mouse/keyboard actions]:
     def start_stop_button(self):
+        self._list_box.select_clear(0)
         if self._stage._record==0: # off, START:
             self.set_label_text('[Mouse/Keyboard listeners started!]')
             self._record_menu.entryconfigure(0, label='Stop Recording')
@@ -131,13 +129,13 @@ class main_frame(Frame):
             _diff_x = abs(self._start_button_x-self._stage._omni._last_int_x)
             _diff_y = abs(self._start_button_y-self._stage._omni._last_int_y)
             if (_diff_x < 210 or _diff_y < 30):
-                print('[_pop last action: Remove click on Save Recording]')
+                print('[_pop last action: Remove click for Save/Replay Recording]')
                 self._stage._pop()
 
             # [Copy _action_items to _action_memory and clear when stopped]:
             self._stage._action_memory = self._stage._action_items.copy()
             self._stage._action_items = []
-        elif self._stage._record==-1: # replay, STOP: (clear action_list to reset replay(?))
+        elif self._stage._record==-1: # replay, STOP: (clear action_list to reset replay) (?)
             self._record_menu.entryconfigure(0, label='BOOYA Button')
             self._start_stop_button['text'] = 'BOOYA Button'
             self.set_label_text('[BOOYA!]')
@@ -145,14 +143,45 @@ class main_frame(Frame):
 
     def save_button(self):
         self._stage._record = 0
-        self.set_label_text('[Saving file]: Provide filename on command line!')
-        # ^(Add pop-up asking for filename) (?)
+        self.set_label_text('[Saving file]: enter the filename below!')
 
-        # [Saving sequence for replay]:
-        self._stage.save_sequence()
+        # [Toggle _save_handler]: (Save Recording|Input Filename)
+        _str = tk.StringVar()
+        self._list_box.select_clear(0)
+        _str.set("Enter: filename.json")
+        self._save_handler.grid_forget()
+        self._save_handler = tk.Entry(self.master, textvariable=_str, width=self._button_width+2)
+        self._save_handler.grid(row=4)
+        self._save_handler.bind("<Button-1>", self._save_input_click_callback)
+        self._save_handler.bind("<Return>", self._save_input_enter_callback)
+
+    def _save_input_enter_callback(event, arg):
+        _file_name = event._save_handler.get()
+
+        # [Validate filename]:
+        if _file_name=='':
+            return None
+        if '.json' not in _file_name:
+            _file_name = '{0}.json'.format(_file_name)
+
+        # [Call save_sequence]:
+        event._stage.save_sequence(file_name=_file_name)
+
+        # [Toggle _save_handler]: (Save Recording|Input Filename)
+        event._save_handler.grid_forget()
+        event._save_handler = tk.Button(event.master, text='Save Recording', width=event._button_width, command=event.save_button)
+        event._save_handler.grid(row=4)
+        #event._list_box.select_clear(0)
+        #event._list_box.select_set(0) # select last added?
+
+        return None
+
+    def _save_input_click_callback(*args):
+        if args[0]._save_handler.get()=="Enter: filename.json":
+            args[0]._save_handler.delete(0, "end")
+        return None
 
     def _gui_replay_callback(self):
-        # [Front-pop index from action_list]:
         _act = self._stage._pop(0)
         if _act != 0:
             _act.RUN(self._stage)
@@ -170,34 +199,35 @@ class main_frame(Frame):
         self.set_label_text('[Deleted replay]: {0}'.format(_selected))
         self.listbox_delete(_idx)
         os.remove(_selected)
+        self._list_box.select_clear(0)
 
     def set_label_text(self, text=''):
         self._label['text'] = text.center(100)
 
     def listbox_insert(self, name):
-        _found = False
-        for _value in self.listbox.get(0, tk.END):
-            if _value==name:
-                _found = True
+        try:
+            _found = False
+            for _value in self._list_box.get(0, tk.END):
+                if _value==name:
+                    _found = True
+        except:
+            pass
 
         if _found is False:
-            self.listbox.insert(tk.END, name)
+            self._list_box.insert(tk.END, name)
 
     def listbox_delete(self, index):
-        self.listbox.delete(index)
+        self._list_box.delete(index)
 
     def listbox_selected(self):
-        for item in map(int, self.listbox.curselection()):
+        for item in map(int, self._list_box.curselection()):
             _index = item
 
-        # [Return file_name from listbox]:
+        # [Return file_name from _list_box]:
         try:
-            return (_index, self.listbox.get(_index))
+            return (_index, self._list_box.get(_index))
         except:
             return (None, None)
-
-    def listbox_run_all(self):
-        print('woomy!')
 
     def on_exit(self):
         self.quit()
@@ -250,9 +280,11 @@ class stage_manager:
         return 0
 
     # [Saving sequence to JSON file for replay]:
-    def save_sequence(self):
-        #if self._main_stage is None: # (?)
-        if self._file_name is None:
+    def save_sequence(self, file_name=None):
+        if file_name is not None:
+            self._file_name = file_name
+
+        if self._main_stage is None and self._file_name is None:
             self._file_name = input('[Do you wish to save replay?] (`filename.json` for yes): ')
 
         # STRIP ESC/TAB SEQ FROM _file_name (?)
