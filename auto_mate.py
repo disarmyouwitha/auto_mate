@@ -22,7 +22,7 @@ def timer(msg):
     print('%s: %.02fms'%(msg, (end-start)*1000))
 
 # [0]: (Check x,y on double-click?)
-# [1]: python3 docker (??)
+# [1]: python3 docker (??) 
 
 # [x]: OSX errors on High Sierra 10.13.6: (https://developer.apple.com/documentation/code_diagnostics/main_thread_checker)
 # 2019-11-20 04:35:05.364 Python[1805:11532996] pid(1805)/euid(0) is calling TIS/TSM in non-main thread environment, ERROR : This is NOT allowed. Please call TIS/TSM in main thread!!!
