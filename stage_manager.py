@@ -171,8 +171,6 @@ class main_frame(Frame):
         event._save_handler.grid_forget()
         event._save_handler = tk.Button(event.master, text='Save Recording', width=event._button_width, command=event.save_button)
         event._save_handler.grid(row=4)
-        #event._list_box.select_clear(0)
-        #event._list_box.select_set(0) # select last added?
 
         return None
 
