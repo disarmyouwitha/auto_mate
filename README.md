@@ -19,19 +19,8 @@ automation testing tools
 > GNU General Public License v3.0
 > https://choosealicense.com/licenses/gpl-3.0/
 
-> [Permissions]:
->    Commercial use
->    Distribution
->    Modification
->    Patent use
->    Private use
+> [Permissions]: Commercial use, Distribution, Modification, Patent use, Private use
 
-> [Conditions]:
->    Disclose source
->    License and copyright notice
->    Same license
->    State changes
+> [Conditions]: Disclose source, License and copyright notice, Same license, State changes
 
-> [Limitations]:
->    Liability
->    Warranty
+> [Limitations]: Liability, Warranty
