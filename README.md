@@ -14,3 +14,24 @@ automation testing tools
 > Once you start the program it will record mouse/keyboard actions
 
 > Press ESC to stop recording and enter replay mode
+
+# [LICENSE]:
+> GNU General Public License v3.0
+> https://choosealicense.com/licenses/gpl-3.0/
+
+> [Permissions]:
+>    Commercial use
+>    Distribution
+>    Modification
+>    Patent use
+>    Private use
+
+> [Conditions]:
+>    Disclose source
+>    License and copyright notice
+>    Same license
+>    State changes
+
+> [Limitations]:
+>    Liability
+>    Warranty
